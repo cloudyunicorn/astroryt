@@ -2,20 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 270 20% 98%;         /* Soft cosmic white */
+    --foreground: 270 40% 15%;         /* Deep space purple */
+    
+    --card: 270 25% 95%;              /* Slightly darker than background */
+    --card-foreground: 270 40% 15%;
+    
+    --popover: 270 25% 97%;           /* Pure white with purple tint */
+    --popover-foreground: 270 40% 15%;
+    
+    --primary: 270 80% 40%;           /* Royal purple */
+    --primary-foreground: 270 20% 98%;
+    
+    --secondary: 327 70% 55%;         /* Cosmic pink */
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 270 20% 92%;             /* Soft purple gray */
+    --muted-foreground: 270 25% 45%;
+    
+    --accent: 230 70% 65%;            /* Starry blue */
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 270 15% 85%;            /* Soft purple borders */
+    --input: 270 15% 85%;
+    --ring: 270 80% 40%;              /* Royal purple focus ring */
+    
+    /* Astrological chart colors */
+    --chart-1: 270 80% 60%;           /* Purple */
+    --chart-2: 230 70% 60%;           /* Blue */
+    --chart-3: 327 70% 60%;           /* Pink */
+    --chart-4: 40 80% 60%;            /* Gold */
+    --chart-5: 180 60% 50%;           /* Teal */
+    
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 270 30% 8%;          /* Deep cosmic void */
+    --foreground: 270 30% 90%;         /* Soft cosmic light */
+    
+    --card: 270 30% 12%;              /* Darker cosmic space */
+    --card-foreground: 270 30% 90%;
+    
+    --popover: 270 30% 10%;           /* Slightly lighter than background */
+    --popover-foreground: 270 30% 90%;
+    
+    --primary: 270 80% 65%;           /* Bright nebula purple */
+    --primary-foreground: 270 30% 10%;
+    
+    --secondary: 327 70% 60%;         /* Galactic pink */
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 270 25% 20%;             /* Dark cosmic dust */
+    --muted-foreground: 270 25% 65%;
+    
+    --accent: 230 70% 50%;            /* Deep space blue */
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 270 25% 25%;            /* Cosmic border */
+    --input: 270 25% 25%;
+    --ring: 270 80% 65%;              /* Bright purple focus ring */
+    
+    /* Dark mode chart colors */
+    --chart-1: 270 80% 70%;           /* Brighter purple */
+    --chart-2: 230 70% 65%;           /* Brighter blue */
+    --chart-3: 327 70% 70%;           /* Brighter pink */
+    --chart-4: 40 80% 70%;            /* Brighter gold */
+    --chart-5: 180 60% 60%;           /* Brighter teal */
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
 }

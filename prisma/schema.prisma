@@ -1,0 +1,182 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql" // or your database provider
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  birthDate     DateTime? // For astrological calculations
+  birthTime     DateTime? // Optional time of birth
+  birthLocation String?   // Location coordinates or city name
+  zodiacSign    String?   // Calculated based on birth date
+  subscriptions Subscription[]
+  reports       AstrologyReport[]
+  chatSessions  ChatHistory[]
+  horoscopes    DailyHoroscope[]
+  preferences   UserPreference[]
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  tier        SubscriptionTier @default(FREE)
+  startDate   DateTime
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+enum SubscriptionTier {
+  FREE
+  PRO
+  PREMIUM
+}
+
+model AstrologyReport {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  title       String
+  content     Json       // Store AI-generated report structure
+  reportType  ReportType
+  zodiacSign  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("astrology_reports")
+}
+
+enum ReportType {
+  PERSONALITY
+  COMPATIBILITY
+  FINANCIAL
+  RELATIONSHIP
+  CUSTOM
+}
+
+model ChatHistory {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  sessionId   String     @unique
+  messages    Json       // Store chat message history
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("chat_history")
+}
+
+model DailyHoroscope {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  date        DateTime
+  content     String
+  zodiacSign  ZodiacSign
+  category    HoroscopeCategory
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("daily_horoscopes")
+}
+
+enum ZodiacSign {
+  ARIES
+  TAURUS
+  GEMINI
+  CANCER
+  LEO
+  VIRGO
+  LIBRA
+  SCORPIO
+  SAGITTARIUS
+  CAPRICORN
+  AQUARIUS
+  PISCES
+}
+
+enum HoroscopeCategory {
+  GENERAL
+  LOVE
+  CAREER
+  HEALTH
+  FINANCE
+}
+
+model UserPreference {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  notificationEnabled Boolean @default(true)
+  notificationTime    DateTime? // Preferred time for daily horoscope
+  reportStyle String?   // Preferred report format/style
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("user_preferences")
+}
+
+// NextAuth.js required models
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  user               User    @relation(fields: [userId], references: [id])
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  expires      DateTime
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
