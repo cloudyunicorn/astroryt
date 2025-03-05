@@ -8,7 +8,7 @@ const Footer = () => {
       <div className="p-5 text-center text-purple-200/80">
         © {currentYear} {APP_NAME}. All Rights Reserved. 
         <span className="block mt-2 text-sm text-purple-300/60">
-          Crafted with ♡ by the Cosmic Team
+          Crafted with ♡ by the Astroryt Team
         </span>
       </div>
     </footer>
