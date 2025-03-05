@@ -3,10 +3,10 @@ import React from 'react';
 import Image from 'next/image';
 import cosmicPattern from '@/assets/hero.svg';
 import { auth } from "@/auth";
-import Dashboard from "@/components/dashboard";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Sparkles, Bot, CalendarDays, Sunrise } from 'lucide-react';
+import Dashboard from "../dashboard/page";
 
 const Home = async () => {
   const session = await auth();

@@ -1,4 +1,4 @@
-import DashboardSkeleton from "@/components/dashboard/loading"
+import DashboardSkeleton from "@/app/dashboard/loading"
 import React from 'react'
 
 const Loading = () => {
