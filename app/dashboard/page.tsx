@@ -1,14 +1,40 @@
+// app/dashboard/page.tsx
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { auth } from '@/auth'
 import Link from 'next/link'
-import { Bot, CalendarDays, Star, BarChart, Settings, BookOpen, Shield, Sunrise, Sparkles } from 'lucide-react'
+import { Bot, CalendarDays, Star, Settings, BookOpen, Shield, Sparkles } from 'lucide-react'
+import { BirthChartService } from '@/lib/services/birth-chart'
+import BirthChartSummary from '@/components/BirthChartSummary'
+import { IBirthChart, PlanetaryData } from '@/components/BirthChartSummary'
+import { getUserRawHorizonsData } from "@/lib/actions/user.action"
 
 export default async function Dashboard() {
   const session = await auth()
   
-  if (!session?.user) return <div>Not authenticated</div>
+  if (!session?.user || !session.user.id) return <div>Not authenticated</div>
+  
+  const userId = session.user.id
+
+  // Fetch the stored BirthChart record from Prisma.
+  const chart = await BirthChartService.getChart(userId)
+
+  // If a BirthChart record exists, the user has provided their birth data.
+  const hasUserBirthData = Boolean(chart)
+
+  // Parse the fetched chart into our expected type.
+  const parsedChart: IBirthChart | null = chart
+    ? {
+        planetaryData: (chart.planetaryData ?? []) as unknown as PlanetaryData[],
+        // Since ascendant is not stored, we set it to undefined.
+        ascendant: undefined,
+        updatedAt: new Date(chart.updatedAt).toISOString(),
+      }
+    : null
+
+  const rawData = await getUserRawHorizonsData(session.user.id)
+  console.log(JSON.parse(JSON.stringify(rawData)).result)
 
   return (
     <div className="min-h-screen p-6 space-y-8 bg-muted/40">
@@ -32,45 +58,12 @@ export default async function Dashboard() {
 
       {/* Main Dashboard Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {/* Birth Chart Summary */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sunrise className="w-6 h-6 text-primary" />
-              Your Birth Chart
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative w-full h-64 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl">
-              {/* Zodiac Wheel Visualization Placeholder */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-muted-foreground">Interactive Zodiac Wheel</span>
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              <div className="flex justify-between">
-                <span>Sun Sign:</span>
-                <span className="font-medium">Aquarius</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Moon Sign:</span>
-                <span className="font-medium">Scorpio</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Ascendant:</span>
-                <span className="font-medium">Leo</span>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button asChild className="w-full" variant="secondary">
-              <Link href="/birth-chart">
-                <BarChart className="w-4 h-4 mr-2" />
-                Full Analysis
-              </Link>
-            </Button>
-          </CardFooter>
-        </Card>
+        {/* Birth Chart Summary Card */}
+        <BirthChartSummary
+          initialChartData={parsedChart}
+          userId={userId}
+          hasUserBirthData={hasUserBirthData}
+        />
 
         {/* AI Astrologer Quick Access */}
         <Card>
@@ -84,7 +77,9 @@ export default async function Dashboard() {
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Recent conversations:</p>
               <div className="p-3 rounded-lg bg-muted/50">
-                <p className="text-sm truncate">What does Mercury retrograde mean for me...</p>
+                <p className="text-sm truncate">
+                  What does Mercury retrograde mean for me...
+                </p>
               </div>
             </div>
             <Progress value={65} className="h-2" />
@@ -171,11 +166,15 @@ export default async function Dashboard() {
           <CardContent className="space-y-4">
             <div className="p-4 rounded-lg bg-secondary/10">
               <p className="text-sm font-medium">Based on your chart:</p>
-              <p className="text-sm">Focus on improving communication skills this month</p>
+              <p className="text-sm">
+                Focus on improving communication skills this month
+              </p>
             </div>
             <div className="p-4 rounded-lg bg-accent/10">
               <p className="text-sm font-medium">Relationship Insight:</p>
-              <p className="text-sm">Best matches: Gemini and Libra signs</p>
+              <p className="text-sm">
+                Best matches: Gemini and Libra signs
+              </p>
             </div>
           </CardContent>
         </Card>

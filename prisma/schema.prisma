@@ -21,6 +21,7 @@ model User {
   birthTime     DateTime? // Optional time of birth
   birthLocation String?   // Location coordinates or city name
   zodiacSign    String?   // Calculated based on birth date
+  birthChart    BirthChart[]
   subscriptions Subscription[]
   reports       AstrologyReport[]
   chatSessions  ChatHistory[]
@@ -31,6 +32,22 @@ model User {
 
   @@map("users")
 }
+
+model BirthChart {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  birthDate       DateTime
+  birthTime       DateTime
+  lat             Float
+  lon             Float
+  rawHorizonsData Json     // Store raw NASA API response
+  vedicData       Json     // Stores calculated Vedic positions
+  planetaryData   Json     // Processed planetary positions
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 
 model Subscription {
   id          String     @id @default(cuid())

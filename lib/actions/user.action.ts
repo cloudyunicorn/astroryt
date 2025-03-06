@@ -6,6 +6,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { hashSync } from "bcrypt-ts-edge";
 import { prisma } from "@/db/prisma";
 import { formatError } from "../utils";
+import { Prisma } from "@prisma/client";
 
 export async function signInWithCredentials(
   prevState: unknown,
@@ -67,4 +68,39 @@ export async function signUpUser(prevState: unknown, formData: FormData) {
     }
     return { success: false, message: formatError(error) };
   }
+}
+
+export async function saveUserBirthData(
+  userId: string,
+  birthDate: string,
+  birthTime: string,
+  lat: number,
+  lon: number
+) {
+  return await prisma.birthChart.create({
+    data: {
+      userId,
+      birthDate: new Date(birthDate),
+      birthTime: new Date(`${birthDate}T${birthTime}`),
+      lat,
+      lon,
+      rawHorizonsData: {}, // initially empty object
+      vedicData: {},       // initially empty object
+      planetaryData: {}    // initially empty object
+    },
+  })
+}
+
+export async function getUserRawHorizonsData(userId: string): Promise<Prisma.JsonValue> {
+  // Find the BirthChart record for the given userId and select only the rawHorizonsData field.
+  const birthChart = await prisma.birthChart.findUnique({
+    where: { userId },
+    select: { rawHorizonsData: true }
+  });
+
+  if (!birthChart) {
+    throw new Error('No birth chart found for this user');
+  }
+
+  return birthChart.rawHorizonsData;
 }
