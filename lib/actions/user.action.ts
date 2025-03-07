@@ -91,6 +91,16 @@ export async function saveUserBirthData(
   })
 }
 
+export async function getUserBirthDate(userId: string) {
+  const birthChart = await prisma.birthChart.findUnique({
+      where: { userId },
+      select: { birthDate: true },
+    });
+    return birthChart?.birthDate
+}
+
+
+
 export async function getUserRawHorizonsData(userId: string): Promise<Prisma.JsonValue> {
   // Find the BirthChart record for the given userId and select only the rawHorizonsData field.
   const birthChart = await prisma.birthChart.findUnique({

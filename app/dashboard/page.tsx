@@ -1,40 +1,52 @@
 // app/dashboard/page.tsx
-import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { auth } from '@/auth'
-import Link from 'next/link'
-import { Bot, CalendarDays, Star, Settings, BookOpen, Shield, Sparkles } from 'lucide-react'
-import { BirthChartService } from '@/lib/services/birth-chart'
-import BirthChartSummary from '@/components/BirthChartSummary'
-import { IBirthChart, PlanetaryData } from '@/components/BirthChartSummary'
-import { getUserRawHorizonsData } from "@/lib/actions/user.action"
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { auth } from '@/auth';
+import Link from 'next/link';
+import {
+  Bot,
+  CalendarDays,
+  Star,
+  Settings,
+  BookOpen,
+  Shield,
+  Sparkles,
+} from 'lucide-react';
+import { BirthChartService } from '@/lib/services/birth-chart';
+import BirthChartSummary from '@/components/BirthChartSummary';
+import { IBirthChart, PlanetaryData } from '@/components/BirthChartSummary';
+import VedicChartDisplay from '@/components/VedicChartDisplay';
 
 export default async function Dashboard() {
-  const session = await auth()
-  
-  if (!session?.user || !session.user.id) return <div>Not authenticated</div>
-  
-  const userId = session.user.id
+  const session = await auth();
+
+  if (!session?.user || !session.user.id) return <div>Not authenticated</div>;
+
+  const userId = session.user.id;
 
   // Fetch the stored BirthChart record from Prisma.
-  const chart = await BirthChartService.getChart(userId)
+  const chart = await BirthChartService.getChart(userId);
 
   // If a BirthChart record exists, the user has provided their birth data.
-  const hasUserBirthData = Boolean(chart)
+  const hasUserBirthData = Boolean(chart);
 
   // Parse the fetched chart into our expected type.
   const parsedChart: IBirthChart | null = chart
     ? {
-        planetaryData: (chart.planetaryData ?? []) as unknown as PlanetaryData[],
+        planetaryData: (chart.planetaryData ??
+          []) as unknown as PlanetaryData[],
         // Since ascendant is not stored, we set it to undefined.
         ascendant: undefined,
         updatedAt: new Date(chart.updatedAt).toISOString(),
       }
-    : null
-
-  const rawData = await getUserRawHorizonsData(session.user.id)
-  console.log(JSON.parse(JSON.stringify(rawData)).result)
+    : null;
 
   return (
     <div className="min-h-screen p-6 space-y-8 bg-muted/40">
@@ -42,9 +54,12 @@ export default async function Dashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-primary">
-            Welcome back, {session.user.name?.split(' ')[0] || 'Stellar Seeker'}!
+            Welcome back, {session.user.name?.split(' ')[0] || 'Stellar Seeker'}
+            !
           </h1>
-          <p className="text-muted-foreground">Your current cosmic energy: 78% aligned</p>
+          <p className="text-muted-foreground">
+            Your current cosmic energy: 78% aligned
+          </p>
         </div>
         <div className="flex gap-4">
           <Button asChild variant="outline">
@@ -75,7 +90,9 @@ export default async function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Recent conversations:</p>
+              <p className="text-sm text-muted-foreground">
+                Recent conversations:
+              </p>
               <div className="p-3 rounded-lg bg-muted/50">
                 <p className="text-sm truncate">
                   What does Mercury retrograde mean for me...
@@ -83,7 +100,9 @@ export default async function Dashboard() {
               </div>
             </div>
             <Progress value={65} className="h-2" />
-            <p className="text-sm text-muted-foreground">65% of monthly queries remaining</p>
+            <p className="text-sm text-muted-foreground">
+              65% of monthly queries remaining
+            </p>
           </CardContent>
           <CardFooter>
             <Button asChild className="w-full">
@@ -106,7 +125,8 @@ export default async function Dashboard() {
           <CardContent className="space-y-4">
             <div className="p-4 rounded-lg bg-accent/10">
               <p className="text-sm italic">
-                &quot;The stars suggest focusing on creative endeavors today. Mercury&apos;s position...&quot;
+                &quot;The stars suggest focusing on creative endeavors today.
+                Mercury&apos;s position...&quot;
               </p>
             </div>
             <div className="flex items-center gap-2 text-sm">
@@ -172,10 +192,18 @@ export default async function Dashboard() {
             </div>
             <div className="p-4 rounded-lg bg-accent/10">
               <p className="text-sm font-medium">Relationship Insight:</p>
-              <p className="text-sm">
-                Best matches: Gemini and Libra signs
-              </p>
+              <p className="text-sm">Best matches: Gemini and Libra signs</p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Vedic Chart Card */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Your Vedic Chart</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <VedicChartDisplay userId={session.user.id} />
           </CardContent>
         </Card>
 
@@ -198,5 +226,5 @@ export default async function Dashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
