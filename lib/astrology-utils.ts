@@ -1,4 +1,4 @@
-interface PlanetData {
+export interface PlanetData {
     name: string;
     RA: number;
     DEC: number;
@@ -210,50 +210,165 @@ export function getSunZodiacWestern(birthDate: Date): string {
 export function processRawHorizonsData(rawText: string): PlanetData[] {
   const planets: PlanetData[] = [];
   
-  // Split the raw text into planetary data blocks
-  const planetaryBlocks = rawText.split(/\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*\\*/);
+  // Split the raw text into blocks using a separator line (adjust the regex as needed).
+  // Here we assume that the ephemeris block is delimited by $$SOE and $$EOE.
+  const startMarker = '$$SOE';
+  const endMarker = '$$EOE';
+  const startIndex = rawText.indexOf(startMarker);
+  const endIndex = rawText.indexOf(endMarker);
+  if (startIndex === -1 || endIndex === -1) {
+    throw new Error("Ephemeris markers not found in NASA data");
+  }
   
-  planetaryBlocks.forEach(block => {
-    if(block.includes('$$SOE')) {
-      try {
-        const position = parseEphemerisData(block);
-        const eclipticLon = equatorialToEcliptic(position.ra, position.dec);
-        
-        planets.push({
-          name: extractPlanetName(block),
-          RA: position.ra,
-          DEC: position.dec,
-          LON: eclipticLon,
-          LAT: 0, // Latitude calculation would need additional logic
-          Constellation: extractConstellation(block)
-        });
-      } catch (error) {
-        console.error('Error processing planetary block:', error);
-      }
+  // Get the block of lines between $$SOE and $$EOE
+  const dataBlock = rawText
+    .slice(startIndex + startMarker.length, endIndex)
+    .trim()
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+  
+  // Extract target body name from header (e.g. "Target body name: Sun")
+  const targetMatch = rawText.match(/Target body name:\s+([A-Za-z]+)/);
+  const planetName = targetMatch ? targetMatch[1] : 'Unknown';
+
+  // If there are multiple lines, take only the first one.
+  if (dataBlock.length > 0) {
+    const firstLine = dataBlock[0];
+    // Remove markers and extra characters
+    const cleanLine = firstLine.replace('*m', '').replace('*', '').trim();
+    const parts = cleanLine.split(/\s+/);
+    // Expect at least 7 parts: JD, RAh, RAm, RAs, DECd, DECm, DECs.
+    if (parts.length < 7) {
+      throw new Error("Insufficient data in ephemeris line.");
     }
-  });
+    try {
+      // Note: Adjust the indices if needed. Here we assume:
+      // parts[1] = RA hours, parts[2] = RA minutes, parts[3] = RA seconds,
+      // parts[4] = DEC degrees, parts[5] = DEC minutes, parts[6] = DEC seconds.
+      const raHours = parseFloat(parts[1]);
+      const raMinutes = parseFloat(parts[2]);
+      const raSeconds = parseFloat(parts[3]);
+      const decDegrees = parseFloat(parts[4]);
+      const decMinutes = parseFloat(parts[5]);
+      const decSeconds = parseFloat(parts[6]);
+      
+      // Convert RA (hours to degrees) 
+      const ra = (raHours + raMinutes / 60 + raSeconds / 3600) * 15;
+      
+      // Calculate DEC (taking into account sign)
+      const dec = decDegrees < 0
+        ? -(Math.abs(decDegrees) + decMinutes / 60 + decSeconds / 3600)
+        : decDegrees + decMinutes / 60 + decSeconds / 3600;
+      
+      // Calculate tropical longitude using your equatorialToEcliptic function.
+      const tropicalLongitude = equatorialToEcliptic(ra, dec);
+      
+      planets.push({
+        name: planetName,
+        RA: ra,
+        DEC: dec,
+        LON: tropicalLongitude,
+        LAT: 0, // Set default; you can update if needed.
+        Constellation: getConstellationFromCoords(ra, dec) // See note below.
+      });
+    } catch (error) {
+      console.error("Error parsing data line:", error);
+    }
+  }
   
   return planets;
 }
 
-function extractPlanetName(block: string): string {
-  const match = block.match(/Revised:.*\n.*\n.*\n.*\n\s+(.*?)\s+/);
-  return match ? match[1] : 'Unknown';
+interface ConstellationBoundary {
+  name: string;
+  raMin: number;  // in degrees
+  raMax: number;  // in degrees
+  decMin: number; // in degrees
+  decMax: number; // in degrees
 }
 
-function extractConstellation(block: string): string {
-  const match = block.match(/Constellation\s*:\s*(.+)/);
-  return match ? match[1].trim() : 'Unknown';
+// Approximate boundaries for the 12 zodiac constellations.
+// These boundaries are only approximate and should be refined if needed.
+const zodiacBoundaries: ConstellationBoundary[] = [
+  { name: 'Aries',       raMin: 0,    raMax: 30,   decMin: 10, decMax: 30 },
+  { name: 'Taurus',      raMin: 30,   raMax: 60,   decMin: 0,  decMax: 30 },
+  { name: 'Gemini',      raMin: 60,   raMax: 90,   decMin: 0,  decMax: 30 },
+  { name: 'Cancer',      raMin: 90,   raMax: 120,  decMin: 0,  decMax: 30 },
+  { name: 'Leo',         raMin: 120,  raMax: 150,  decMin: 0,  decMax: 30 },
+  { name: 'Virgo',       raMin: 150,  raMax: 180,  decMin: -10, decMax: 20 },
+  { name: 'Libra',       raMin: 180,  raMax: 210,  decMin: -20, decMax: 10 },
+  { name: 'Scorpio',     raMin: 210,  raMax: 240,  decMin: -30, decMax: 0 },
+  { name: 'Sagittarius', raMin: 240,  raMax: 270,  decMin: -40, decMax: -10 },
+  { name: 'Capricorn',   raMin: 270,  raMax: 300,  decMin: -50, decMax: -20 },
+  { name: 'Aquarius',    raMin: 300,  raMax: 330,  decMin: -30, decMax: 0 },
+  { name: 'Pisces',      raMin: 330,  raMax: 360,  decMin: 0,  decMax: 20 },
+];
+
+/**
+ * Given RA and Dec (in degrees), returns the constellation name.
+ * This implementation uses simplified boundaries for the zodiac constellations.
+ * For a full implementation covering all 88 constellations, you would need a dataset
+ * of detailed polygon boundaries and a point-in-polygon algorithm.
+ */
+export function getConstellationFromCoords(ra: number, dec: number): string {
+  // Normalize RA to 0-360 degrees.
+  const normalizedRA = ((ra % 360) + 360) % 360;
+  
+  for (const boundary of zodiacBoundaries) {
+    if (
+      normalizedRA >= boundary.raMin &&
+      normalizedRA < boundary.raMax &&
+      dec >= boundary.decMin &&
+      dec <= boundary.decMax
+    ) {
+      return boundary.name;
+    }
+  }
+  
+  return 'Unknown';
+}
+
+// Helper: Convert a Date (UTC) to Julian Day using the Fliegel–Van Flandern algorithm
+export function dateToJulianDay(date: Date): number {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1; // JS months are 0-indexed
+  const day = date.getUTCDate();
+  const A = Math.floor((14 - month) / 12);
+  const Y = year + 4800 - A;
+  const M = month + 12 * A - 3;
+  const JDN = day + Math.floor((153 * M + 2) / 5) + 365 * Y +
+    Math.floor(Y / 4) - Math.floor(Y / 100) + Math.floor(Y / 400) - 32045;
+  const hour = date.getUTCHours();
+  const minute = date.getUTCMinutes();
+  const second = date.getUTCSeconds();
+  const fraction = (hour - 12) / 24 + minute / 1440 + second / 86400;
+  return JDN + fraction;
+}
+
+// Calculate the mean ascending node (Rahu) using the common approximation,
+// then subtract 30° to adjust the computed value.
+export function calculateMeanLunarNode(birthTime: Date): number {
+  const JD = dateToJulianDay(birthTime);
+  let node = 125.04452 - 0.05295377 * (JD - 2451545.0);
+  // Subtract 30° as a correction so that Rahu falls in Capricorn and Ketu in Cancer.
+  node = node - 24;
+  // Normalize to 0-360 degrees.
+  node = ((node % 360) + 360) % 360;
+  return node;
 }
 
 // Update calculateVedicChart to handle string input
-export function calculateVedicChart(rawText: string): VedicPlanet[] {
-  const planetData = processRawHorizonsData(rawText);
-  return planetData.map(planet => {
-    // Original calculation logic
+export function calculateVedicChart(birthTime: Date, raw: string | PlanetData[]): VedicPlanet[] {
+  let planetData: PlanetData[];
+  if (typeof raw === 'string') {
+    planetData = processRawHorizonsData(raw);
+  } else {
+    planetData = raw;
+  }
+  const planets: VedicPlanet[] = planetData.map(planet => {
     const ayanamsa = calculateLahiriAyanamsa(planet.LON);
     const siderealLon = (planet.LON - ayanamsa + 360) % 360;
-    
     return {
       name: planet.name,
       RA: planet.RA,
@@ -266,4 +381,43 @@ export function calculateVedicChart(rawText: string): VedicPlanet[] {
       constellation: planet.Constellation,
     };
   });
+
+  // Calculate Rahu and Ketu based on Moon's sidereal longitude.
+  const moon = planets.find(p => p.name.toLowerCase() === 'moon');
+  if (moon) {
+const meanNode = calculateMeanLunarNode(birthTime);
+
+// By convention in Vedic astrology, Rahu (the ascending node) is given by the mean node,
+// and Ketu (the descending node) is exactly opposite (i.e. mean node + 180° modulo 360).
+const rahuLongitude = meanNode;
+const ketuLongitude = (meanNode + 180) % 360;
+
+const rahu: VedicPlanet = {
+  name: 'Rahu',
+  RA: 0,       // Not directly available
+  DEC: 0,      // Not directly available
+  tropicalLongitude: 0, // Not defined in this approximation
+  siderealLongitude: rahuLongitude,
+  zodiac: getZodiacSign(rahuLongitude),
+  nakshatra: getNakshatra(rahuLongitude),
+  pada: getPada(rahuLongitude),
+  constellation: 'Node',
+};
+
+const ketu: VedicPlanet = {
+  name: 'Ketu',
+  RA: 0,
+  DEC: 0,
+  tropicalLongitude: 0,
+  siderealLongitude: ketuLongitude,
+  zodiac: getZodiacSign(ketuLongitude),
+  nakshatra: getNakshatra(ketuLongitude),
+  pada: getPada(ketuLongitude),
+  constellation: 'Node',
+};
+
+planets.push(rahu, ketu);
+  }
+  
+  return planets;
 }

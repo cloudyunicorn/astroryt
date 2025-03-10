@@ -1,3 +1,5 @@
+import { getZodiacSign } from "@/lib/astrology-utils";
+
 export function ZodiacWheel({ houses }: { houses: number[] }) {
     return (
         <div className="relative w-64 h-64 mx-auto">

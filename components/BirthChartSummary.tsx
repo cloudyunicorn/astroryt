@@ -62,39 +62,6 @@ function getRasiName(index: number): string {
   return rasiNames[(index - 1) % 12]
 }
 
-const nakshatraNames = [
-  'Ashwini',
-  'Bharani',
-  'Krittika',
-  'Rohini',
-  'Mrigashirsha',
-  'Ardra',
-  'Punarvasu',
-  'Pushya',
-  'Ashlesha',
-  'Magha',
-  'Purva Phalguni',
-  'Uttara Phalguni',
-  'Hasta',
-  'Chitra',
-  'Swati',
-  'Vishakha',
-  'Anuradha',
-  'Jyeshtha',
-  'Mula',
-  'Purva Ashadha',
-  'Uttara Ashadha',
-  'Shravana',
-  'Dhanishta',
-  'Shatabhisha',
-  'Purva Bhadrapada',
-  'Uttara Bhadrapada',
-  'Revati',
-]
-
-function getNakshatraName(index: number): string {
-  return nakshatraNames[(index - 1) % 27]
-}
 
 export default function BirthChartSummary({
   initialChartData,
@@ -113,8 +80,12 @@ export default function BirthChartSummary({
       await BirthChartService.calculateChart(userId)
       const newData = await BirthChartService.getChart(userId)
       setChart(parseBirthChart(newData))
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate birth chart')
+    } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unknown error occurred');
+        }
     } finally {
       setLoading(false)
     }
