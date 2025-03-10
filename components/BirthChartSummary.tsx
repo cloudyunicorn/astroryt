@@ -23,7 +23,7 @@ export interface IBirthChart {
 }
 
 interface BirthChartSummaryProps {
-  initialChartData: any | null
+  initialChartData: IBirthChart | null
   userId: string
   hasUserBirthData: boolean
 }
@@ -31,15 +31,18 @@ interface BirthChartSummaryProps {
 /**
  * Helper to convert raw data into our IBirthChart type.
  */
-function parseBirthChart(raw: any): IBirthChart | null {
-  if (!raw) return null
+function parseBirthChart(raw: unknown): IBirthChart | null {
+  if (!raw || typeof raw !== 'object' || raw === null) return null
+  const data = raw as Record<string, unknown>
   return {
-    planetaryData: (raw.planetaryData ?? []) as unknown as PlanetaryData[],
-    ascendant: raw.ascendant ?? undefined,
+    planetaryData: Array.isArray(data.planetaryData)
+      ? (data.planetaryData as PlanetaryData[])
+      : [],
+    ascendant: typeof data.ascendant === 'number' ? data.ascendant : undefined,
     updatedAt:
-      raw.updatedAt instanceof Date
-        ? raw.updatedAt.toISOString()
-        : String(raw.updatedAt),
+      data.updatedAt instanceof Date
+        ? data.updatedAt.toISOString()
+        : String(data.updatedAt),
   }
 }
 

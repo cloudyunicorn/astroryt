@@ -40,8 +40,12 @@ export default function BirthDataForm({ userId }: BirthDataFormProps) {
       )
       // Redirect to the dashboard after saving.
       router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'Failed to save birth data')
+    } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unknown error occurred');
+        }
     } finally {
       setLoading(false)
     }
