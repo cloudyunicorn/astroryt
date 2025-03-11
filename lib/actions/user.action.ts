@@ -114,3 +114,16 @@ export async function getUserRawHorizonsData(userId: string): Promise<Prisma.Jso
 
   return birthChart.rawHorizonsData;
 }
+
+export async function getUserVedicData(userId: string): Promise<Prisma.JsonValue> {
+  const chart = await prisma.birthChart.findUnique({
+    where: { userId },
+    select: { vedicData: true }
+  });
+
+  if (!chart) {
+    throw new Error('No birth chart found for this user');
+  }
+
+  return chart.vedicData;
+}

@@ -23,6 +23,7 @@ import { BirthChartService } from '@/lib/services/birth-chart';
 import BirthChartSummary from '@/components/BirthChartSummary';
 import { IBirthChart, PlanetaryData } from '@/components/BirthChartSummary';
 import VedicChartDisplay from '@/components/VedicChartDisplay';
+import { getUserVedicData } from "@/lib/actions/user.action";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -47,6 +48,8 @@ export default async function Dashboard() {
         updatedAt: new Date(chart.updatedAt).toISOString(),
       }
     : null;
+
+  const vedicData = await getUserVedicData(userId);
 
   return (
     <div className="min-h-screen p-6 space-y-8 bg-muted/40">
@@ -78,6 +81,7 @@ export default async function Dashboard() {
           initialChartData={parsedChart}
           userId={userId}
           hasUserBirthData={hasUserBirthData}
+          vedicData={vedicData}
         />
 
         {/* AI Astrologer Quick Access */}

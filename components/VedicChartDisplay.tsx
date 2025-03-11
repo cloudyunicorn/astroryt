@@ -81,8 +81,6 @@ export default function VedicChartDisplay({ userId }: { userId: string }) {
     </Card>
   );
 
-  console.log(chart)
-
   return (
     <Card>
       <CardHeader>
