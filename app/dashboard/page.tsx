@@ -22,8 +22,10 @@ import {
 import { BirthChartService } from '@/lib/services/birth-chart';
 import BirthChartSummary from '@/components/BirthChartSummary';
 import { IBirthChart, PlanetaryData } from '@/components/BirthChartSummary';
-import VedicChartDisplay from '@/components/VedicChartDisplay';
-import { getUserVedicData } from "@/lib/actions/user.action";
+// import VedicChartDisplay from '@/components/VedicChartDisplay';
+import { getUserVedicData } from '@/lib/actions/user.action';
+import DailyHoroscope from '@/components/DailyHoroscope';
+import WeeklyHoroscope from '@/components/WeeklyHoroscope';
 
 export default async function Dashboard() {
   const session = await auth();
@@ -49,7 +51,8 @@ export default async function Dashboard() {
       }
     : null;
 
-  const vedicData = await getUserVedicData(userId);
+  const vedicData = hasUserBirthData ? await getUserVedicData(userId) : null;
+
 
   return (
     <div className="min-h-screen p-6 space-y-8 bg-muted/40">
@@ -60,9 +63,9 @@ export default async function Dashboard() {
             Welcome back, {session.user.name?.split(' ')[0] || 'Stellar Seeker'}
             !
           </h1>
-          <p className="text-muted-foreground">
+          {/* <p className="text-muted-foreground">
             Your current cosmic energy: 78% aligned
-          </p>
+          </p> */}
         </div>
         <div className="flex gap-4">
           <Button asChild variant="outline">
@@ -83,6 +86,43 @@ export default async function Dashboard() {
           hasUserBirthData={hasUserBirthData}
           vedicData={vedicData}
         />
+
+        {/* Daily Guidance */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="w-6 h-6 text-accent" />
+              Horoscopes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* <div className="p-4 rounded-lg bg-accent/10">
+              <p className="text-sm italic">
+                &quot;The stars suggest focusing on creative endeavors today.
+                Mercury&apos;s position...&quot;
+              </p>
+            </div> */}
+            {/* Daily Horoscope Card */}
+            <DailyHoroscope zodiacSign="Leo" />
+            <div className="flex items-center gap-2 text-sm">
+              <Shield className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Love: ★★★★☆</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <BookOpen className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Career: ★★★☆☆</span>
+            </div>
+            <WeeklyHoroscope zodiacSign="Leo" />
+          </CardContent>
+          <CardFooter>
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/horoscopes">
+                View more horoscopes
+                <CalendarDays className="w-4 h-4 ml-2" />
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
 
         {/* AI Astrologer Quick Access */}
         <Card>
@@ -113,40 +153,6 @@ export default async function Dashboard() {
               <Link href="/chat">
                 <Sparkles className="w-4 h-4 mr-2" />
                 New Conversation
-              </Link>
-            </Button>
-          </CardFooter>
-        </Card>
-
-        {/* Daily Guidance */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="w-6 h-6 text-accent" />
-              Today&apos;s Horoscope
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 rounded-lg bg-accent/10">
-              <p className="text-sm italic">
-                &quot;The stars suggest focusing on creative endeavors today.
-                Mercury&apos;s position...&quot;
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Shield className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Love: ★★★★☆</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <BookOpen className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Career: ★★★☆☆</span>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/horoscopes">
-                Weekly Forecast
-                <CalendarDays className="w-4 h-4 ml-2" />
               </Link>
             </Button>
           </CardFooter>
@@ -207,7 +213,7 @@ export default async function Dashboard() {
             <CardTitle>Your Vedic Chart</CardTitle>
           </CardHeader>
           <CardContent>
-            <VedicChartDisplay userId={session.user.id} />
+            {/* <VedicChartDisplay userId={session.user.id} /> */}
           </CardContent>
         </Card>
 

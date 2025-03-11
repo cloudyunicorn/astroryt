@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -39,12 +39,31 @@ interface BirthChartSummaryProps {
   initialChartData: IBirthChart | null;
   userId: string;
   hasUserBirthData: boolean;
-  vedicData: unknown
+  vedicData: unknown;
 }
 
 interface StoredVedicData {
   lagna: string;
   planets: PlanetaryData[];
+  sunZodiac: string;
+  moonNakshatra: string;
+}
+
+interface VedicPlanet {
+  name: string;
+  RA: number;
+  DEC: number;
+  tropicalLongitude: number;
+  siderealLongitude: number;
+  zodiac: string;
+  nakshatra: string;
+  pada: number;
+  constellation: string;
+}
+
+interface VedicChart {
+  planets: VedicPlanet[];
+  lagna: string;
   sunZodiac: string;
   moonNakshatra: string;
 }
@@ -72,13 +91,15 @@ export default function BirthChartSummary({
   initialChartData,
   userId,
   hasUserBirthData,
-  vedicData
+  vedicData,
 }: BirthChartSummaryProps) {
   const [chart, setChart] = useState<IBirthChart | null>(
     parseBirthChart(initialChartData)
   );
+  const [chartV, setChartV] = useState<VedicChart | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadFlag, setReloadFlag] = useState(false); // Add reload trigger
 
   const handleGenerateChart = async () => {
     setLoading(true);
@@ -88,6 +109,9 @@ export default function BirthChartSummary({
       await BirthChartService.calculateChart(userId);
       const newData = await BirthChartService.getChart(userId);
       setChart(parseBirthChart(newData));
+
+      await fetchVedicChart();
+      setReloadFlag((prev) => !prev);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -99,8 +123,39 @@ export default function BirthChartSummary({
     }
   };
 
-  const storedData = vedicData as StoredVedicData;
-  const vedicLagna = storedData.lagna;
+  // Add useEffect to handle final reload
+  useEffect(() => {
+    if (reloadFlag) {
+      // Any final cleanup or state updates after reload
+      setReloadFlag(false);
+    }
+  }, [reloadFlag]);
+
+  const storedData = hasUserBirthData ? (vedicData as StoredVedicData) : null;
+  const vedicLagna = hasUserBirthData ? storedData?.lagna : null;
+
+  const fetchVedicChart = async () => {
+    try {
+      const res = await fetch('/api/calculate-chart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const { data } = (await res.json()) as { data: VedicChart };
+      setChartV(data);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
+    }
+  };
 
   return (
     <Card className="md:col-span-2 shadow-sm border border-border/20 rounded-lg bg-background">
@@ -113,9 +168,9 @@ export default function BirthChartSummary({
       <CardContent>
         {loading ? (
           <Skeleton className="h-64 w-full rounded-xl" />
-        ) : chart ? (
+        ) : hasUserBirthData && chart ? (
           <>
-            <div className="mt-2 space-y-4">
+            <div className="mt-4 space-y-2">
               {/* Planetary Data Section */}
               <div className="p-3 bg-muted/10 rounded-md">
                 <h3 className="text-md font-medium text-muted-foreground mb-3">
@@ -149,23 +204,43 @@ export default function BirthChartSummary({
                 <div className="flex items-center justify-between px-2 py-1 bg-secondary/10 rounded">
                   <span className="text-sm text-foreground/70">Ascendant:</span>
                   <span className="text-sm font-semibold">
-                    {vedicLagna}
+                    {vedicLagna || 'N/A'}
                   </span>
                 </div>
               </div>
             </div>
           </>
         ) : (
+          // When no birth data is available, show the Enter Birth Data button centered.
           <div className="flex flex-col items-center justify-center h-64">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mb-4">
               No birth chart calculated yet.
             </p>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="mt-4">
+                  Enter Birth Data
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogTitle>Enter Your Birth Data</DialogTitle>
+                <DialogDescription>
+                  Please enter your birth details below.
+                </DialogDescription>
+                <BirthDataForm userId={userId} />
+                <DialogClose asChild>
+                  <Button variant="ghost" className="mt-2 w-full">
+                    Close
+                  </Button>
+                </DialogClose>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
         {error && <p className="text-destructive mt-2 text-sm">{error}</p>}
       </CardContent>
-      <CardFooter className="flex justify-end">
-        {hasUserBirthData ? (
+      {hasUserBirthData && (
+        <CardFooter className="flex justify-end">
           <Button onClick={handleGenerateChart} disabled={loading}>
             {loading
               ? 'Generating...'
@@ -173,27 +248,8 @@ export default function BirthChartSummary({
               ? 'Regenerate Birth Chart'
               : 'Calculate Birth Chart'}
           </Button>
-        ) : (
-          // When no birth data is provided, show a Dialog to enter data.
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline">Enter Birth Data</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogTitle>Enter Your Birth Data</DialogTitle>
-              <DialogDescription>
-                Please enter your birth details below.
-              </DialogDescription>
-              <BirthDataForm userId={userId} />
-              <DialogClose asChild>
-                <Button variant="ghost" className="mt-2 w-full">
-                  Close
-                </Button>
-              </DialogClose>
-            </DialogContent>
-          </Dialog>
-        )}
-      </CardFooter>
+        </CardFooter>
+      )}
     </Card>
   );
 }
