@@ -15,17 +15,15 @@ import {
   CalendarDays,
   Star,
   Settings,
-  BookOpen,
-  Shield,
   Sparkles,
 } from 'lucide-react';
 import { BirthChartService } from '@/lib/services/birth-chart';
 import BirthChartSummary from '@/components/BirthChartSummary';
 import { IBirthChart, PlanetaryData } from '@/components/BirthChartSummary';
-// import VedicChartDisplay from '@/components/VedicChartDisplay';
-import { getUserVedicData } from '@/lib/actions/user.action';
 import DailyHoroscope from '@/components/DailyHoroscope';
 import WeeklyHoroscope from '@/components/WeeklyHoroscope';
+import { getUserBirthDate } from "@/lib/actions/user.action";
+import { getSunZodiacWestern } from "@/lib/astrology-utils";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -43,16 +41,18 @@ export default async function Dashboard() {
   // Parse the fetched chart into our expected type.
   const parsedChart: IBirthChart | null = chart
     ? {
-        planetaryData: (chart.planetaryData ??
-          []) as unknown as PlanetaryData[],
+        planetaryData: (chart.planetaryData ?? []) as unknown as PlanetaryData[],
         // Since ascendant is not stored, we set it to undefined.
         ascendant: undefined,
         updatedAt: new Date(chart.updatedAt).toISOString(),
       }
     : null;
-
-  const vedicData = hasUserBirthData ? await getUserVedicData(userId) : null;
-
+  
+  // Get the user's birth date. If it doesn't exist, provide a fallback.
+  const userBirthDate = await getUserBirthDate(userId);
+  const westernZodiac = userBirthDate
+    ? await getSunZodiacWestern(userBirthDate)
+    : "Birth data not entered";
 
   return (
     <div className="min-h-screen p-6 space-y-8 bg-muted/40">
@@ -60,12 +60,13 @@ export default async function Dashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-primary">
-            Welcome back, {session.user.name?.split(' ')[0] || 'Stellar Seeker'}
-            !
+            Welcome back, {session.user.name?.split(' ')[0] || 'Stellar Seeker'}!
           </h1>
-          {/* <p className="text-muted-foreground">
-            Your current cosmic energy: 78% aligned
-          </p> */}
+          <p className="text-muted-foreground">
+            {westernZodiac !== "Birth data not entered"
+              ? `Your Sun sign is ${westernZodiac}`
+              : "Please enter your birth data to calculate your horoscope."}
+          </p>
         </div>
         <div className="flex gap-4">
           <Button asChild variant="outline">
@@ -84,7 +85,6 @@ export default async function Dashboard() {
           initialChartData={parsedChart}
           userId={userId}
           hasUserBirthData={hasUserBirthData}
-          vedicData={vedicData}
         />
 
         {/* Daily Guidance */}
@@ -96,23 +96,8 @@ export default async function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* <div className="p-4 rounded-lg bg-accent/10">
-              <p className="text-sm italic">
-                &quot;The stars suggest focusing on creative endeavors today.
-                Mercury&apos;s position...&quot;
-              </p>
-            </div> */}
-            {/* Daily Horoscope Card */}
-            <DailyHoroscope zodiacSign="Leo" />
-            <div className="flex items-center gap-2 text-sm">
-              <Shield className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Love: ★★★★☆</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <BookOpen className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Career: ★★★☆☆</span>
-            </div>
-            <WeeklyHoroscope zodiacSign="Leo" />
+            <DailyHoroscope zodiacSign={westernZodiac} />
+            <WeeklyHoroscope zodiacSign={westernZodiac} />
           </CardContent>
           <CardFooter>
             <Button asChild variant="outline" className="w-full">
@@ -134,9 +119,7 @@ export default async function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Recent conversations:
-              </p>
+              <p className="text-sm text-muted-foreground">Recent conversations:</p>
               <div className="p-3 rounded-lg bg-muted/50">
                 <p className="text-sm truncate">
                   What does Mercury retrograde mean for me...
@@ -144,9 +127,7 @@ export default async function Dashboard() {
               </div>
             </div>
             <Progress value={65} className="h-2" />
-            <p className="text-sm text-muted-foreground">
-              65% of monthly queries remaining
-            </p>
+            <p className="text-sm text-muted-foreground">65% of monthly queries remaining</p>
           </CardContent>
           <CardFooter>
             <Button asChild className="w-full">
@@ -204,16 +185,6 @@ export default async function Dashboard() {
               <p className="text-sm font-medium">Relationship Insight:</p>
               <p className="text-sm">Best matches: Gemini and Libra signs</p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Vedic Chart Card */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Your Vedic Chart</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* <VedicChartDisplay userId={session.user.id} /> */}
           </CardContent>
         </Card>
 
