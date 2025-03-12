@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     const fetchedPlanets: Array<{ name: string; rawData: unknown }> = [];
     for (const planet of planetsToFetch) {
       // Wait 1 second between requests (adjust as needed)
-      await delay(1000);
+      await delay(750);
       const url = `https://ssd.jpl.nasa.gov/api/horizons.api?format=json
   &COMMAND='${planet.command}'
   &OBJ_DATA=YES
