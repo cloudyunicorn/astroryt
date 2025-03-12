@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -82,7 +82,7 @@ function parseBirthChart(raw: unknown): IBirthChart | null {
 export default function BirthChartSummary({
   initialChartData,
   userId,
-  hasUserBirthData
+  hasUserBirthData,
 }: BirthChartSummaryProps) {
   const [chart, setChart] = useState<IBirthChart | null>(
     parseBirthChart(initialChartData)
@@ -144,6 +144,22 @@ export default function BirthChartSummary({
       }
     }
   };
+
+  const handleReload = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newData = await BirthChartService.getChart(userId);
+      setChart(parseBirthChart(newData));
+      await fetchVedicChart();
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : 'An unknown error occurred'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
   return (
     <Card className="md:col-span-2 shadow-sm border border-border/20 rounded-lg bg-background">
@@ -235,6 +251,9 @@ export default function BirthChartSummary({
               : chart
               ? 'Regenerate Birth Chart'
               : 'Calculate Birth Chart'}
+          </Button>
+          <Button variant="outline" onClick={handleReload} disabled={loading}>
+            Reload
           </Button>
         </CardFooter>
       )}
