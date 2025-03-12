@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { BirthChartService } from '@/lib/services/birth-chart';
 import BirthChartSummary from '@/components/BirthChartSummary';
-import { IBirthChart, PlanetaryData } from '@/components/BirthChartSummary';
+import { IBirthChart, PlanetaryData } from '@/lib/types/birth-chart';
 import DailyHoroscope from '@/components/DailyHoroscope';
 import WeeklyHoroscope from '@/components/WeeklyHoroscope';
 import { getUserBirthDate } from "@/lib/actions/user.action";
