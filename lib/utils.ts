@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { format } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -28,3 +29,19 @@ export function formatError(error: any) {
       : JSON.stringify(error.message);
   }
 }
+
+export const formatBirthDate = (date: Date): string => {
+  const day = format(date, "do"); // "10th"
+  const month = format(date, "MMMM"); // "July"
+  const year = format(date, "yyyy"); // "1980"
+  return `${day} ${month} ${year}`;
+};
+
+// Function to format the time in local time format (e.g., "02:30 PM")
+export const formatBirthTime = (time: Date): string => {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true, // Ensures AM/PM format
+  }).format(time);
+};

@@ -10,20 +10,15 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { auth } from '@/auth';
 import Link from 'next/link';
-import {
-  Bot,
-  CalendarDays,
-  Star,
-  Settings,
-  Sparkles,
-} from 'lucide-react';
+import { Bot, CalendarDays, Star, Settings, Sparkles } from 'lucide-react';
 import { BirthChartService } from '@/lib/services/birth-chart';
-import BirthChartSummary from '@/components/BirthChartSummary';
 import { IBirthChart, PlanetaryData } from '@/lib/types/birth-chart';
 import DailyHoroscope from '@/components/DailyHoroscope';
 import WeeklyHoroscope from '@/components/WeeklyHoroscope';
-import { getUserBirthDate } from "@/lib/actions/user.action";
-import { getSunZodiacWestern } from "@/lib/astrology-utils";
+import { getUserBirthDate, getUserBirthTime } from '@/lib/actions/user.action';
+import { getSunZodiacWestern } from '@/lib/astrology-utils';
+import BirthChartSummary from '@/components/BirthChartSummary';
+import { formatBirthDate, formatBirthTime } from "@/lib/utils";
 
 export default async function Dashboard() {
   const session = await auth();
@@ -41,18 +36,23 @@ export default async function Dashboard() {
   // Parse the fetched chart into our expected type.
   const parsedChart: IBirthChart | null = chart
     ? {
-        planetaryData: (chart.planetaryData ?? []) as unknown as PlanetaryData[],
+        planetaryData: (chart.planetaryData ??
+          []) as unknown as PlanetaryData[],
         // Since ascendant is not stored, we set it to undefined.
         ascendant: undefined,
         updatedAt: new Date(chart.updatedAt).toISOString(),
       }
     : null;
-  
+
+  const userBirthTimeRaw = await getUserBirthTime(userId);
+  const userBirthTime = userBirthTimeRaw ? formatBirthTime(userBirthTimeRaw) : null;
+
   // Get the user's birth date. If it doesn't exist, provide a fallback.
-  const userBirthDate = await getUserBirthDate(userId);
-  const westernZodiac = userBirthDate
-    ? await getSunZodiacWestern(userBirthDate)
-    : "Birth data not entered";
+  const userBirthDateRaw = await getUserBirthDate(userId);
+  const westernZodiac = userBirthDateRaw
+    ? await getSunZodiacWestern(userBirthDateRaw)
+    : 'Birth data not entered';
+  const userBirthDate = userBirthDateRaw ? formatBirthDate(userBirthDateRaw) : null;
 
   return (
     <div className="min-h-screen p-6 space-y-8 bg-muted/40">
@@ -60,12 +60,13 @@ export default async function Dashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-primary">
-            Welcome back, {session.user.name?.split(' ')[0] || 'Stellar Seeker'}!
+            Welcome back, {session.user.name?.split(' ')[0] || 'Stellar Seeker'}
+            !
           </h1>
           <p className="text-muted-foreground">
-            {westernZodiac !== "Birth data not entered"
+            {westernZodiac !== 'Birth data not entered'
               ? `Your Sun sign is ${westernZodiac}`
-              : "Please enter your birth data to calculate your horoscope."}
+              : 'Please enter your birth data to calculate your horoscope.'}
           </p>
         </div>
         <div className="flex gap-4">
@@ -85,6 +86,9 @@ export default async function Dashboard() {
           initialChartData={parsedChart}
           userId={userId}
           hasUserBirthData={hasUserBirthData}
+          userBirthDate={userBirthDate}
+          userBirthTime={userBirthTime}
+          westernZodiac={westernZodiac}
         />
 
         {/* Daily Guidance */}
@@ -119,7 +123,9 @@ export default async function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Recent conversations:</p>
+              <p className="text-sm text-muted-foreground">
+                Recent conversations:
+              </p>
               <div className="p-3 rounded-lg bg-muted/50">
                 <p className="text-sm truncate">
                   What does Mercury retrograde mean for me...
@@ -127,7 +133,9 @@ export default async function Dashboard() {
               </div>
             </div>
             <Progress value={65} className="h-2" />
-            <p className="text-sm text-muted-foreground">65% of monthly queries remaining</p>
+            <p className="text-sm text-muted-foreground">
+              65% of monthly queries remaining
+            </p>
           </CardContent>
           <CardFooter>
             <Button asChild className="w-full">

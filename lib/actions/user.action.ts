@@ -99,6 +99,14 @@ export async function getUserBirthDate(userId: string) {
     return birthChart?.birthDate
 }
 
+export async function getUserBirthTime(userId: string) {
+  const birthChart = await prisma.birthChart.findUnique({
+      where: { userId },
+      select: { birthTime: true },
+    });
+    return birthChart?.birthTime
+}
+
 
 
 export async function getUserRawHorizonsData(userId: string): Promise<Prisma.JsonValue> {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -11,23 +11,39 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sunrise } from 'lucide-react';
+import { BirthChartService } from '@/lib/services/birth-chart';
+import BirthDataDisplay from './BirthDataDisplay';
+import PlanetaryPositions from './PlanetaryPositions';
+import ReloadButton from './ReloadButton';
+import { PlanetaryData, VedicChart } from '@/lib/types/birth-chart';
 import {
   Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
   DialogClose,
-} from '@/components/ui/dialog';
-import { BirthChartService } from '@/lib/services/birth-chart';
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from './ui/dialog';
 import BirthDataForm from './BirthDataForm';
-import { PlanetaryData, IBirthChart, VedicChart } from '@/lib/types/birth-chart';
-import PlanetaryList from './PlanetaryList';
+
+export interface IBirthChart {
+  planetaryData: {
+    name: string;
+    zodiac: string;
+    nakshatra: number;
+    pada: number;
+  }[];
+  ascendant?: number;
+  updatedAt: string;
+}
 
 interface BirthChartSummaryProps {
   initialChartData: IBirthChart | null;
   userId: string;
   hasUserBirthData: boolean;
+  westernZodiac: string;
+  userBirthDate?: string | null;
+  userBirthTime?: string | null;
 }
 
 function parseBirthChart(raw: unknown): IBirthChart | null {
@@ -49,7 +65,10 @@ function parseBirthChart(raw: unknown): IBirthChart | null {
 export default function BirthChartSummary({
   initialChartData,
   userId,
-  hasUserBirthData
+  hasUserBirthData,
+  userBirthDate,
+  userBirthTime,
+  westernZodiac,
 }: BirthChartSummaryProps) {
   const [chart, setChart] = useState<IBirthChart | null>(
     parseBirthChart(initialChartData)
@@ -67,7 +86,7 @@ export default function BirthChartSummary({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId }),
-        }).then(res => res.json()),
+        }).then((res) => res.json()),
       ]);
 
       setChart(parseBirthChart(natalData));
@@ -97,7 +116,7 @@ export default function BirthChartSummary({
 
       // Trigger new calculations
       await BirthChartService.calculateChart(userId);
-      
+
       // Refresh both data sources
       await fetchAllChartData();
     } catch (err: unknown) {
@@ -122,35 +141,32 @@ export default function BirthChartSummary({
       <CardContent>
         {loading ? (
           <Skeleton className="h-64 w-full rounded-xl" />
-        ) : hasUserBirthData && chart && chartV ? (
+        ) : hasUserBirthData && chart ? (
           <>
-            <div className="mt-4 space-y-2">
-              <div className="p-3 bg-muted/10 rounded-md">
-                <h3 className="text-md font-medium text-muted-foreground mb-3">
-                  Planetary Positions
+            <BirthDataDisplay
+              vedicZodiacSign={chart.planetaryData[0]?.zodiac || 'Unknown'}
+              westernZodiac={westernZodiac}
+              birthDate={userBirthDate}
+              birthTime={userBirthTime}
+            />
+            {chartV && (
+              <div className="flex items-center justify-between px-2 py-1 bg-secondary/10 rounded">
+                <h3 className="text-lg font-semibold text-primary">
+                  Lagna
                 </h3>
-                <ul className="space-y-2">
-                  <PlanetaryList data={chart.planetaryData} />
-                </ul>
+                <p className="text-sm">
+                  {chartV.lagna}
+                </p>
               </div>
-
-              <div className="p-3 bg-muted/10 rounded-md">
-                <h3 className="text-md font-medium text-muted-foreground mb-2">
-                  Ascendant
-                </h3>
-                <div className="flex items-center justify-between px-2 py-1 bg-secondary/10 rounded">
-                  <span className="text-sm text-foreground/70">Ascendant:</span>
-                  <span className="text-sm font-semibold">
-                    {chartV.lagna}
-                  </span>
-                </div>
-              </div>
+            )}
+            <div className="mt-4 flex justify-center">
+              <PlanetaryPositions planetaryData={chart.planetaryData} />
             </div>
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-64">
             <p className="text-sm text-muted-foreground mb-4">
-              {hasUserBirthData 
+              {hasUserBirthData
                 ? 'Calculating your birth chart...'
                 : 'No birth chart calculated yet.'}
             </p>
@@ -177,13 +193,19 @@ export default function BirthChartSummary({
             )}
           </div>
         )}
+
         {error && <p className="text-destructive mt-2 text-sm">{error}</p>}
       </CardContent>
       {hasUserBirthData && (
         <CardFooter className="flex justify-end">
           <Button onClick={handleGenerateChart} disabled={loading}>
-            {loading ? 'Generating...' : 'Regenerate Birth Chart'}
+            {loading
+              ? 'Generating...'
+              : chart
+              ? 'Regenerate Birth Chart'
+              : 'Calculate Birth Chart'}
           </Button>
+          <ReloadButton onReload={() => window.location.reload()} />
         </CardFooter>
       )}
     </Card>
