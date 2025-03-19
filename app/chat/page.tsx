@@ -1,10 +1,10 @@
-// app/components/ChatPage.tsx
 'use client';
 
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button'; // (Optional: For error/loading text styling)
+import { Button } from '@/components/ui/button';
 import { useChat } from "@/context/ChatContext";
+import { Loader2 } from "lucide-react"; // Spinner icon
 
 interface Message {
   role: 'user' | 'ai';
@@ -12,26 +12,20 @@ interface Message {
 }
 
 export default function ChatPage() {
-  // State to hold the conversation messages
   const [messages, setMessages] = useState<Message[]>([]);
-  // State to track input text
   const [input, setInput] = useState('');
-  // Loading and error states for the API call
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
   const { personalData } = useChat();
 
-  // Function to send a new message to the AI using OpenRouter API
   const sendMessage = async () => {
     if (!input.trim()) return;
-    // Append the user message to the conversation
     const userMessage: Message = { role: 'user', content: input.trim() };
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
     setError('');
 
-    // Construct the prompt with personalized context. Adjust this prompt as needed.
     const prompt = `You're my personal astrologer. My zodiac sign is ${personalData.zodiac} and my planetary positions are: ${personalData.planetarySummary}. Please answer my query: "${input.trim()}". Give the reply in a structured way using emoticons and new lines and concise language`;
 
     try {
@@ -62,7 +56,6 @@ export default function ChatPage() {
       }
 
       const data = await res.json();
-      // Extract the AI's response – adjust the extraction if the API returns a different structure.
       const aiText = data?.choices?.[0]?.message?.content || "No answer provided.";
       const aiMessage: Message = { role: 'ai', content: aiText };
       setMessages((prev) => [...prev, aiMessage]);
@@ -81,15 +74,16 @@ export default function ChatPage() {
         <CardTitle className="text-xl font-bold">AI Astrologer Chat</CardTitle>
       </CardHeader>
       <CardContent className="max-h-[70vh] overflow-y-auto space-y-4 p-4">
-        {/* Display conversation messages */}
         {messages.map((msg, index) => (
-          <div
-            key={index}
-            className="p-2 rounded"
-          >
+          <div key={index} className="p-2 rounded">
             <p className="text-sm">{msg.content}</p>
           </div>
         ))}
+        {loading && (
+          <div className="flex justify-center items-center">
+            <Loader2 className="animate-spin w-6 h-6 text-primary" />
+          </div>
+        )}
         {error && <p className="text-sm text-destructive">{error}</p>}
       </CardContent>
       <CardFooter className="flex items-center gap-2 p-4">
@@ -101,7 +95,7 @@ export default function ChatPage() {
           className="flex-grow p-2 border rounded"
         />
         <Button onClick={sendMessage} disabled={loading || !input.trim()}>
-          Send
+          {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Send'}
         </Button>
       </CardFooter>
     </Card>

@@ -73,6 +73,7 @@ export default async function Dashboard() {
       userBirthTime={userBirthTime}
       userId={userId}
       parsedChart={parsedChart} // ✅ Pass parsedChart
+      westernZodiac={westernZodiac}
     />
   );
 }
