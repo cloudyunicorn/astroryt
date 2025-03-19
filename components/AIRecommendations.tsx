@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface PersonalData {
   zodiac: string;
@@ -23,19 +22,20 @@ export default function AIRecommendations({ personalData }: AIRecommendationsPro
   const fetchRecommendation = async () => {
     setLoading(true);
     setError('');
+
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!apiKey) throw new Error("Missing Gemini API key");
+      const response = await fetch('/api/gemini-recommendation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(personalData),
+      });
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      if (!response.ok) {
+        throw new Error('Failed to fetch recommendation');
+      }
 
-      const prompt = `You're my personal astrologer. My zodiac sign is ${personalData.zodiac} and my planetary positions are: ${personalData.planetarySummary}. Provide a single-sentence recommendation for my well-being.`;
-
-      const result = await model.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-
-      const aiResponse = result?.response?.candidates?.[0]?.content?.parts?.[0]?.text || 'No recommendation available.';
-      setRecommendation(aiResponse);
+      const data = await response.json();
+      setRecommendation(data.recommendation || 'No recommendation available.');
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
       else setError('An unknown error occurred.');
