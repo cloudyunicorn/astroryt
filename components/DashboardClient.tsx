@@ -9,12 +9,13 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import Link from 'next/link';
-import { Bot, CalendarDays, Star, Settings, Sparkles } from 'lucide-react';
+import { Bot, CalendarDays, Star, Settings } from 'lucide-react';
 import BirthChartSummary from '@/components/BirthChartSummary';
 import AIChatDialog from "@/components/AIChatDialog";
 import { useChat } from "@/context/ChatContext";
 import { useEffect } from 'react';
 import { IBirthChart } from '@/lib/types/birth-chart';
+import AIRecommendations from "./AIRecommendations";
 
 interface Session {
   user: {
@@ -146,16 +147,9 @@ export default function DashboardClient({
         {/* AI Recommendations */}
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-secondary" />
-              AI Recommendations
-            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 rounded-lg bg-secondary/10">
-              <p className="text-sm font-medium">Based on your chart:</p>
-              <p className="text-sm">Focus on improving communication skills this month</p>
-            </div>
+            <AIRecommendations personalData={personalData} />
           </CardContent>
         </Card>
       </div>
