@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -77,7 +77,7 @@ export default function BirthChartSummary({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAllChartData = async () => {
+  const fetchAllChartData = useCallback(async () => {
     try {
       // Fetch both data sources in parallel
       const [natalData, vedicData] = await Promise.all([
@@ -98,13 +98,13 @@ export default function BirthChartSummary({
         setError('Failed to load chart data');
       }
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     if (hasUserBirthData) {
       fetchAllChartData();
     }
-  }, [hasUserBirthData]);
+  }, [hasUserBirthData, fetchAllChartData]);
 
   const handleGenerateChart = async () => {
     setLoading(true);
@@ -151,12 +151,8 @@ export default function BirthChartSummary({
             />
             {chartV && (
               <div className="flex items-center justify-between px-2 py-1 bg-secondary/10 rounded">
-                <h3 className="text-lg font-semibold text-primary">
-                  Lagna
-                </h3>
-                <p className="text-sm">
-                  {chartV.lagna}
-                </p>
+                <h3 className="text-lg font-semibold text-primary">Lagna</h3>
+                <p className="text-sm">{chartV.lagna}</p>
               </div>
             )}
             <div className="mt-4 flex justify-center">

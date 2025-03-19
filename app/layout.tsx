@@ -5,6 +5,7 @@ import { APP_DESCRIPTION, APP_NAME, SERVER_URL } from '@/lib/constants';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { Toaster } from '@/components/ui/sonner';
+import { ChatProvider } from '@/context/ChatContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -42,10 +43,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Providers>
-            <Toaster  />
-            {children}
-          </Providers>
+          <ChatProvider>
+            <Providers>
+              <Toaster />
+              {children}
+            </Providers>
+          </ChatProvider>
         </ThemeProvider>
       </body>
     </html>
