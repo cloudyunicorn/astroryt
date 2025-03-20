@@ -16,8 +16,8 @@ import { useChat } from "@/context/ChatContext";
 import { useEffect } from 'react';
 import { IBirthChart } from '@/lib/types/birth-chart';
 import AIRecommendations from "./AIRecommendations";
-import DailyHoroscope from "./DailyHoroscope";
-import WeeklyHoroscope from "./WeeklyHoroscope";
+// import DailyHoroscope from "./DailyHoroscope";
+// import WeeklyHoroscope from "./WeeklyHoroscope";
 
 interface Session {
   user: {
@@ -39,7 +39,7 @@ export default function DashboardClient({
   userBirthTime,
   userId,
   parsedChart,
-  westernZodiac
+  // westernZodiac
 }: {
   session: Session;
   personalData: PersonalData;
@@ -101,8 +101,8 @@ export default function DashboardClient({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DailyHoroscope zodiacSign={westernZodiac} />
-            <WeeklyHoroscope zodiacSign={westernZodiac} />
+            {/* <DailyHoroscope zodiacSign={westernZodiac} />
+            <WeeklyHoroscope zodiacSign={westernZodiac} /> */}
           </CardContent>
           <CardFooter>
             <Button asChild variant="outline" className="w-full">

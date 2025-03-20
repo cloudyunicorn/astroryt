@@ -60,17 +60,17 @@ export function parseEphemerisData(text: string) {
   // Use the first data line.
   const dataLine = lines[0];
   const parts = dataLine.split(/\s+/);
-  if (parts.length < 8) {
+  if (parts.length < 7) {
     throw new Error("Insufficient data in ephemeris line.");
   }
   // parts[2] = RA hours, parts[3] = RA minutes, parts[4] = RA seconds,
   // parts[5] = DEC degrees, parts[6] = DEC minutes, parts[7] = DEC seconds.
-  const raHours = parseFloat(parts[2]);
-  const raMinutes = parseFloat(parts[3]);
-  const raSeconds = parseFloat(parts[4]);
-  const decDegrees = parseFloat(parts[5]);
-  const decMinutes = parseFloat(parts[6]);
-  const decSeconds = parseFloat(parts[7]);
+  const raHours = parseFloat(parts[1]);
+  const raMinutes = parseFloat(parts[2]);
+  const raSeconds = parseFloat(parts[3]);
+  const decDegrees = parseFloat(parts[3]);
+  const decMinutes = parseFloat(parts[5]);
+  const decSeconds = parseFloat(parts[6]);
   
   const ra = (raHours + raMinutes / 60 + raSeconds / 3600) * 15;
   const dec = (Math.abs(decDegrees) + decMinutes / 60 + decSeconds / 3600) * (parts[5].startsWith('-') ? -1 : 1);
@@ -86,16 +86,21 @@ export function parseEphemerisData(text: string) {
  */
 
 export function equatorialToEcliptic(ra: number, dec: number, epsilon = 23.44): number {
-  const raRad = (ra * Math.PI) / 180;
-  const decRad = (dec * Math.PI) / 180;
-  const epsilonRad = (epsilon * Math.PI) / 180;
-  // Calculate the ecliptic longitude (lambda)
-  const lambda = Math.atan2(
-    Math.sin(raRad) * Math.cos(epsilonRad) + Math.tan(decRad) * Math.sin(epsilonRad),
-    Math.cos(raRad)
-  );
-  let lambdaDeg = (lambda * 180) / Math.PI;
+  const raRad = ra * Math.PI / 180;
+  const decRad = dec * Math.PI / 180;
+  const epsilonRad = epsilon * Math.PI / 180;
+
+  const sinEpsilon = Math.sin(epsilonRad);
+  const cosEpsilon = Math.cos(epsilonRad);
+
+  const y = Math.sin(raRad) * cosEpsilon + Math.tan(decRad) * sinEpsilon;
+  const x = Math.cos(raRad);
+  const lambda = Math.atan2(y, x);
+
+  // Convert to degrees and normalize
+  let lambdaDeg = lambda * 180 / Math.PI;
   if (lambdaDeg < 0) lambdaDeg += 360;
+  
   return lambdaDeg;
 }
 
@@ -239,19 +244,19 @@ export function processRawHorizonsData(rawText: string): PlanetData[] {
     const cleanLine = firstLine.replace('*m', '').replace('*', '').trim();
     const parts = cleanLine.split(/\s+/);
     // Expect at least 7 parts: JD, RAh, RAm, RAs, DECd, DECm, DECs.
-    if (parts.length < 7) {
+    if (parts.length < 8) {
       throw new Error("Insufficient data in ephemeris line.");
     }
     try {
       // Note: Adjust the indices if needed. Here we assume:
       // parts[1] = RA hours, parts[2] = RA minutes, parts[3] = RA seconds,
       // parts[4] = DEC degrees, parts[5] = DEC minutes, parts[6] = DEC seconds.
-      const raHours = parseFloat(parts[1]);
-      const raMinutes = parseFloat(parts[2]);
-      const raSeconds = parseFloat(parts[3]);
-      const decDegrees = parseFloat(parts[4]);
-      const decMinutes = parseFloat(parts[5]);
-      const decSeconds = parseFloat(parts[6]);
+      const raHours = parseFloat(parts[2]);
+      const raMinutes = parseFloat(parts[3]);
+      const raSeconds = parseFloat(parts[4]);
+      const decDegrees = parseFloat(parts[5]);
+      const decMinutes = parseFloat(parts[6]);
+      const decSeconds = parseFloat(parts[7]);
       
       // Convert RA (hours to degrees) 
       const ra = (raHours + raMinutes / 60 + raSeconds / 3600) * 15;
@@ -332,28 +337,36 @@ export function getConstellationFromCoords(ra: number, dec: number): string {
 // Helper: Convert a Date (UTC) to Julian Day using the Fliegel–Van Flandern algorithm
 export function dateToJulianDay(date: Date): number {
   const year = date.getUTCFullYear();
-  const month = date.getUTCMonth() + 1; // JS months are 0-indexed
+  const month = date.getUTCMonth() + 1;
   const day = date.getUTCDate();
-  const A = Math.floor((14 - month) / 12);
-  const Y = year + 4800 - A;
-  const M = month + 12 * A - 3;
-  const JDN = day + Math.floor((153 * M + 2) / 5) + 365 * Y +
-    Math.floor(Y / 4) - Math.floor(Y / 100) + Math.floor(Y / 400) - 32045;
-  const hour = date.getUTCHours();
-  const minute = date.getUTCMinutes();
-  const second = date.getUTCSeconds();
-  const fraction = (hour - 12) / 24 + minute / 1440 + second / 86400;
-  return JDN + fraction;
+  const hour = date.getUTCHours() + date.getUTCMinutes()/60 + date.getUTCSeconds()/3600;
+
+  const a = Math.floor((14 - month) / 12);
+  const y = year + 4800 - a;
+  const m = month + 12*a - 3;
+
+  const jd = day + Math.floor((153*m + 2)/5) + 
+    365*y + Math.floor(y/4) - 
+    Math.floor(y/100) + Math.floor(y/400) - 
+    32045 + (hour - 12)/24;
+
+  // Add fraction of day
+  return jd;
 }
 
 // Calculate the mean ascending node (Rahu) using the common approximation,
 // then subtract 30° to adjust the computed value.
 export function calculateMeanLunarNode(birthTime: Date): number {
   const JD = dateToJulianDay(birthTime);
-  let node = 125.04452 - 0.05295377 * (JD - 2451545.0);
-  // Subtract 30° as a correction so that Rahu falls in Capricorn and Ketu in Cancer.
-  node = node - 24;
-  // Normalize to 0-360 degrees.
+  const T = (JD - 2451545.0) / 36525;
+  
+  // Improved polynomial approximation
+  let node = 125.04452 
+    - 1934.136261 * T 
+    + 0.0020708 * T*T 
+    + T*T*T / 450000;
+    node = node - 24;
+  // Normalize to 0-360
   node = ((node % 360) + 360) % 360;
   return node;
 }
