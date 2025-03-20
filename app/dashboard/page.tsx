@@ -35,11 +35,11 @@ export default async function Dashboard() {
   // Parse the fetched chart into our expected type.
   const parsedChart: IBirthChart | null = chart
     ? {
-        planetaryData: Array.isArray(chart.planetaryData)
-          ? (chart.planetaryData as PlanetaryData[])
+        planetaryData: Array.isArray(chart?.planetaryData)
+          ? (chart?.planetaryData as PlanetaryData[])
           : [],
         ascendant: undefined,
-        updatedAt: new Date(chart.updatedAt).toISOString(),
+        updatedAt: new Date(chart?.updatedAt).toISOString(),
       }
     : null;
 
@@ -60,8 +60,8 @@ export default async function Dashboard() {
   const personalData = {
     zodiac: westernZodiac, // from your birth chart data
     planetarySummary:
-      Array.isArray(chart.planetaryData)
-        ? (chart.planetaryData as PlanetaryData[])
+      Array.isArray(chart?.planetaryData)
+        ? (chart?.planetaryData as PlanetaryData[])
             .map((p) => `${p.name}: ${p.zodiac}`)
             .join(', ')
         : 'No planetary data available',
