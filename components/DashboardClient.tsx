@@ -37,6 +37,7 @@ export default function DashboardClient({
   hasUserBirthData,
   userBirthDate,
   userBirthTime,
+  userBirthLocation,
   userId,
   parsedChart,
   // westernZodiac
@@ -46,6 +47,7 @@ export default function DashboardClient({
   hasUserBirthData: boolean;
   userBirthDate: string | null;
   userBirthTime: string | null;
+  userBirthLocation: string | null | undefined;
   userId: string;
   parsedChart: IBirthChart | null;
   westernZodiac: string
@@ -89,6 +91,7 @@ export default function DashboardClient({
           hasUserBirthData={hasUserBirthData}
           userBirthDate={userBirthDate}
           userBirthTime={userBirthTime}
+          userBirthLocation={userBirthLocation}
           westernZodiac={personalData.zodiac}
         />
 

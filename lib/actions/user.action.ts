@@ -75,8 +75,13 @@ export async function saveUserBirthData(
   birthDate: string,
   birthTime: string,
   lat: number,
-  lon: number
+  lon: number,
+  birthLocation: string
 ) {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { birthLocation },
+  });
   return await prisma.birthChart.create({
     data: {
       userId,
@@ -107,7 +112,13 @@ export async function getUserBirthTime(userId: string) {
     return birthChart?.birthTime
 }
 
-
+export async function getUserBirthLocation(id: string) {
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { birthLocation: true },
+  });
+  return user?.birthLocation;
+}
 
 export async function getUserRawHorizonsData(userId: string): Promise<Prisma.JsonValue> {
   // Find the BirthChart record for the given userId and select only the rawHorizonsData field.

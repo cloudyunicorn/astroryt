@@ -44,6 +44,7 @@ interface BirthChartSummaryProps {
   westernZodiac: string;
   userBirthDate?: string | null;
   userBirthTime?: string | null;
+  userBirthLocation?: string | null | undefined;
 }
 
 function parseBirthChart(raw: unknown): IBirthChart | null {
@@ -68,6 +69,7 @@ export default function BirthChartSummary({
   hasUserBirthData,
   userBirthDate,
   userBirthTime,
+  userBirthLocation,
   westernZodiac,
 }: BirthChartSummaryProps) {
   const [chart, setChart] = useState<IBirthChart | null>(
@@ -148,6 +150,7 @@ export default function BirthChartSummary({
               westernZodiac={westernZodiac}
               birthDate={userBirthDate}
               birthTime={userBirthTime}
+              birthLocation={userBirthLocation}
             />
             {chartV && (
               <div className="flex items-center justify-between px-2 py-1 bg-secondary/10 rounded">
@@ -198,7 +201,7 @@ export default function BirthChartSummary({
             {loading
               ? 'Generating...'
               : chart
-              ? 'Regenerate Birth Chart'
+              ? 'Generate Birth Chart'
               : 'Calculate Birth Chart'}
           </Button>
           <ReloadButton onReload={() => window.location.reload()} />

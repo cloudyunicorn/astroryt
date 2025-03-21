@@ -4,7 +4,7 @@ import { BirthChartService } from '@/lib/services/birth-chart';
 import { IBirthChart, PlanetaryData } from '@/lib/types/birth-chart';
 // import DailyHoroscope from '@/components/DailyHoroscope';
 // import WeeklyHoroscope from '@/components/WeeklyHoroscope';
-import { getUserBirthDate, getUserBirthTime } from '@/lib/actions/user.action';
+import { getUserBirthDate, getUserBirthLocation, getUserBirthTime } from '@/lib/actions/user.action';
 import { getSunZodiacWestern } from '@/lib/astrology-utils';
 import { formatBirthDate, formatBirthTime } from '@/lib/utils';
 import DashboardClient from "@/components/DashboardClient";
@@ -13,7 +13,6 @@ interface MySession {
   user: {
     id: string;
     name?: string | null;
-    // add more fields as needed
   };
 }
 
@@ -43,6 +42,7 @@ export default async function Dashboard() {
       }
     : null;
 
+  const userBirthLocation = await getUserBirthLocation(userId)
   const userBirthTimeRaw = await getUserBirthTime(userId);
   const userBirthTime = userBirthTimeRaw
     ? formatBirthTime(userBirthTimeRaw)
@@ -66,6 +66,14 @@ export default async function Dashboard() {
             .join(', ')
         : 'No planetary data available',
   };
+  // const rawData = await getUserRawHorizonsData(userId)
+  // const data1 = processRawHorizonsData(JSON.parse(JSON.stringify(rawData)).Sun.result)
+  // const test = equatorialToEcliptic(336, 24.9)
+  // const zod = getZodiacSign(349)
+  // console.log("TEST",test)
+  // console.log(JSON.parse(JSON.stringify(rawData)).Sun.result)
+  // console.log(data1)
+  // console.log(rawData)
 
   return (
     <DashboardClient
@@ -74,6 +82,7 @@ export default async function Dashboard() {
       hasUserBirthData={hasUserBirthData}
       userBirthDate={userBirthDate}
       userBirthTime={userBirthTime}
+      userBirthLocation={userBirthLocation}
       userId={userId}
       parsedChart={parsedChart} // ✅ Pass parsedChart
       westernZodiac={westernZodiac}

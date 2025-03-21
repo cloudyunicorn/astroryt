@@ -27,9 +27,17 @@ const NAKSHATRAS = [
     'Shatabhisha', 'Purva Bhadrapada', 'Uttara Bhadrapada', 'Revati'
 ];
 
-function calculateLahiriAyanamsa(tropicalLon: number): number {
-    // Simplified ayanamsa calculation (for precise results consider polynomial equations)
-    return 23.85 + (tropicalLon / 360) * 50.27 / 3600;
+export function calculateLahiriAyanamsaFromJD(jd: number): number {
+  const T = (jd - 2451545.0) / 36525;
+  const ayanamsa =
+    24.04225 +
+    1.396971278 * T -
+    0.0003086 * T * T +
+    T ** 3 / 49931 -
+    T ** 4 / 15300 -
+    T ** 5 / 2000000;
+
+  return ayanamsa;
 }
 
 // function getZodiacSign(longitude: number): string {
@@ -37,71 +45,14 @@ function calculateLahiriAyanamsa(tropicalLon: number): number {
 // }
 
 function getNakshatra(longitude: number): string {
-    return NAKSHATRAS[Math.floor(longitude / 13.3333)];
+    const normalizedLon = longitude % 360;
+  return NAKSHATRAS[Math.floor(normalizedLon / (360 / 27))];
 }
 
 function getPada(longitude: number): number {
-    return Math.floor((longitude % 13.3333) / 3.3333) + 1;
-}
-
-export function parseEphemerisData(text: string) {
-  const startMarker = '$$SOE';
-  const endMarker = '$$EOE';
-  const startIndex = text.indexOf(startMarker);
-  const endIndex = text.indexOf(endMarker);
-  if (startIndex === -1 || endIndex === -1) {
-    throw new Error("Ephemeris markers not found.");
-  }
-  const block = text.substring(startIndex + startMarker.length, endIndex).trim();
-  const lines = block.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  if (lines.length === 0) {
-    throw new Error("No ephemeris data found.");
-  }
-  // Use the first data line.
-  const dataLine = lines[0];
-  const parts = dataLine.split(/\s+/);
-  if (parts.length < 7) {
-    throw new Error("Insufficient data in ephemeris line.");
-  }
-  // parts[2] = RA hours, parts[3] = RA minutes, parts[4] = RA seconds,
-  // parts[5] = DEC degrees, parts[6] = DEC minutes, parts[7] = DEC seconds.
-  const raHours = parseFloat(parts[1]);
-  const raMinutes = parseFloat(parts[2]);
-  const raSeconds = parseFloat(parts[3]);
-  const decDegrees = parseFloat(parts[3]);
-  const decMinutes = parseFloat(parts[5]);
-  const decSeconds = parseFloat(parts[6]);
-  
-  const ra = (raHours + raMinutes / 60 + raSeconds / 3600) * 15;
-  const dec = (Math.abs(decDegrees) + decMinutes / 60 + decSeconds / 3600) * (parts[5].startsWith('-') ? -1 : 1);
-  return { ra, dec };
-}
-
-/**
- * Converts equatorial coordinates (RA, DEC) to tropical ecliptic longitude.
- * @param ra - Right Ascension in decimal degrees.
- * @param dec - Declination in decimal degrees.
- * @param epsilon - Obliquity of the ecliptic in degrees (default is 23.44°).
- * @returns Tropical ecliptic longitude in degrees.
- */
-
-export function equatorialToEcliptic(ra: number, dec: number, epsilon = 23.44): number {
-  const raRad = ra * Math.PI / 180;
-  const decRad = dec * Math.PI / 180;
-  const epsilonRad = epsilon * Math.PI / 180;
-
-  const sinEpsilon = Math.sin(epsilonRad);
-  const cosEpsilon = Math.cos(epsilonRad);
-
-  const y = Math.sin(raRad) * cosEpsilon + Math.tan(decRad) * sinEpsilon;
-  const x = Math.cos(raRad);
-  const lambda = Math.atan2(y, x);
-
-  // Convert to degrees and normalize
-  let lambdaDeg = lambda * 180 / Math.PI;
-  if (lambdaDeg < 0) lambdaDeg += 360;
-  
-  return lambdaDeg;
+    const segment = 360 / 27; // 13.3333°
+  const nakshatraLon = longitude % segment;
+  return Math.floor(nakshatraLon / (segment / 4)) + 1;
 }
 
 /**
@@ -111,10 +62,17 @@ export function equatorialToEcliptic(ra: number, dec: number, epsilon = 23.44): 
  * @returns Sidereal longitude in degrees.
  */
 
-export function tropicalToSidereal(tropical: number, ayanamsa = 24.0): number {
-  let sidereal = tropical - ayanamsa;
-  if (sidereal < 0) sidereal += 360;
-  return sidereal;
+export function equatorialToEcliptic(ra: number, dec: number, epsilon = 23.44): number {
+  const raRad = (ra * Math.PI) / 180;
+  const decRad = (dec * Math.PI) / 180;
+  const epsilonRad = (epsilon * Math.PI) / 180;
+  const lambda = Math.atan2(
+    Math.sin(raRad) * Math.cos(epsilonRad) + Math.tan(decRad) * Math.sin(epsilonRad),
+    Math.cos(raRad)
+  );
+  let lambdaDeg = (lambda * 180) / Math.PI;
+  if (lambdaDeg < 0) lambdaDeg += 360;
+  return lambdaDeg;
 }
 
 export function getZodiacSign(longitude: number): string {
@@ -124,31 +82,6 @@ export function getZodiacSign(longitude: number): string {
   ];
   const index = Math.floor(longitude / 30) % 12;
   return signs[index];
-}
-
-/**
- * Given raw Horizons output text, parse the data and return the calculated
- * astrological parameters.
- * @param rawText - The plain-text output from the Horizons API.
- * @returns An object containing tropicalLongitude, siderealLongitude, zodiacSign, and the parsed RA/DEC.
- */
-export function calculatePlanetaryPosition(rawText: string) {
-  // Parse RA and DEC from the raw text.
-  const { ra, dec } = parseEphemerisData(rawText);
-  // Convert to tropical ecliptic longitude.
-  const tropicalLongitude = equatorialToEcliptic(ra, dec);
-  // Convert tropical to sidereal (adjust ayanamsa as needed).
-  const siderealLongitude = tropicalToSidereal(tropicalLongitude, 24.0);
-  // Determine zodiac sign.
-  const zodiacSign = getZodiacSign(siderealLongitude);
-
-  return {
-    ra,
-    dec,
-    tropicalLongitude,
-    siderealLongitude,
-    zodiacSign,
-  };
 }
 
 /**
@@ -172,24 +105,6 @@ export function calculateLagna(birthTime: Date, longitude: number): string {
   return signs[index];
 }
 
-/**
- * Calculates the Moon's Nakshatra based on its sidereal longitude.
- * @param moonSiderealLongitude - The Moon's sidereal ecliptic longitude in degrees.
- * @returns The Nakshatra name.
- */
-export function calculateMoonNakshatra(moonSiderealLongitude: number): string {
-  const nakshatras = [
-    "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashirsha",
-    "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha", 
-    "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", 
-    "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", 
-    "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", 
-    "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
-  ];
-  const segment = 360 / 27; // ~13.3333° per nakshatra.
-  const index = Math.floor(moonSiderealLongitude / segment) % 27;
-  return nakshatras[index];
-}
 
 export function getSunZodiacWestern(birthDate: Date): string {
   const day = birthDate.getDate();
@@ -211,12 +126,40 @@ export function getSunZodiacWestern(birthDate: Date): string {
   return "";
 }
 
+export interface HorizonsData {
+  jd: number;
+  planets: PlanetData[];
+}
 
-export function processRawHorizonsData(rawText: string): PlanetData[] {
-  const planets: PlanetData[] = [];
-  
-  // Split the raw text into blocks using a separator line (adjust the regex as needed).
-  // Here we assume that the ephemeris block is delimited by $$SOE and $$EOE.
+export interface PlanetData {
+  name: string;
+  RA: number;    // Right Ascension in degrees
+  DEC: number;   // Declination in degrees
+  LON: number;   // Ecliptic longitude in degrees
+  LAT: number;   // Ecliptic latitude (0 for Sun)
+  Constellation: string;
+}
+
+export interface HorizonsData {
+  jd: number;         // Julian Date
+  planets: PlanetData[];
+}
+
+export interface PlanetData {
+  name: string;
+  RA: number;
+  DEC: number;
+  LON: number;
+  LAT: number;
+  Constellation: string;
+}
+
+export interface HorizonsData {
+  jd: number;
+  planets: PlanetData[];
+}
+
+export function processRawHorizonsData(rawText: string): HorizonsData {
   const startMarker = '$$SOE';
   const endMarker = '$$EOE';
   const startIndex = rawText.indexOf(startMarker);
@@ -224,163 +167,169 @@ export function processRawHorizonsData(rawText: string): PlanetData[] {
   if (startIndex === -1 || endIndex === -1) {
     throw new Error("Ephemeris markers not found in NASA data");
   }
-  
-  // Get the block of lines between $$SOE and $$EOE
+
   const dataBlock = rawText
     .slice(startIndex + startMarker.length, endIndex)
     .trim()
     .split('\n')
     .map(line => line.trim())
     .filter(line => line.length > 0);
-  
-  // Extract target body name from header (e.g. "Target body name: Sun")
+
+  if (dataBlock.length === 0) {
+    throw new Error("No ephemeris data found.");
+  }
+
+  // Use the first line to extract JD and planet data.
+  const firstLine = dataBlock[0];
+  const cleanLine1 = firstLine.replace('*m', '').replace('*', '').trim();
+    const cleanLine2 = cleanLine1.replace('N', '').replace('*', '').trim();
+    const parts = cleanLine2.split(/\s+/);
+
+  if (parts.length < 8) {
+    throw new Error(`Insufficient data in ephemeris line: ${parts.length} parts; expected at least 8 for JD, RA (h m s), DEC (d m s).`);
+  }
+
+  // Extract JD from parts[0]
+  const jd = parseFloat(parts[0]);
+  if (isNaN(jd)) {
+    throw new Error("Failed to parse JD from data.");
+  }
+
+  // Correct indices for RA and DEC:
+  // parts[2] = RA hours, parts[3] = RA minutes, parts[4] = RA seconds,
+  // parts[5] = DEC degrees, parts[6] = DEC minutes, parts[7] = DEC seconds.
+  const raHours = parseFloat(parts[1]);
+  const raMinutes = parseFloat(parts[2]);
+  const raSeconds = parseFloat(parts[3]);
+  const decDegrees = parseFloat(parts[4]);
+  const decMinutes = parseFloat(parts[5]);
+  const decSeconds = parseFloat(parts[6]);
+
+  if (
+    isNaN(raHours) || isNaN(raMinutes) || isNaN(raSeconds) ||
+    isNaN(decDegrees) || isNaN(decMinutes) || isNaN(decSeconds)
+  ) {
+    throw new Error("Failed to parse RA or DEC components.");
+  }
+
+  const ra = (raHours + raMinutes / 60 + raSeconds / 3600) * 15;
+  const dec = decDegrees < 0
+    ? -(Math.abs(decDegrees) + decMinutes / 60 + decSeconds / 3600)
+    : decDegrees + decMinutes / 60 + decSeconds / 3600;
+
+  const tropicalLongitude = equatorialToEcliptic(ra, dec);
+
+  // Extract target body name from header (if available).
   const targetMatch = rawText.match(/Target body name:\s+([A-Za-z]+)/);
   const planetName = targetMatch ? targetMatch[1] : 'Unknown';
 
-  // If there are multiple lines, take only the first one.
-  if (dataBlock.length > 0) {
-    const firstLine = dataBlock[0];
-    // Remove markers and extra characters
-    const cleanLine = firstLine.replace('*m', '').replace('*', '').trim();
-    const parts = cleanLine.split(/\s+/);
-    // Expect at least 7 parts: JD, RAh, RAm, RAs, DECd, DECm, DECs.
-    if (parts.length < 8) {
-      throw new Error("Insufficient data in ephemeris line.");
-    }
-    try {
-      // Note: Adjust the indices if needed. Here we assume:
-      // parts[1] = RA hours, parts[2] = RA minutes, parts[3] = RA seconds,
-      // parts[4] = DEC degrees, parts[5] = DEC minutes, parts[6] = DEC seconds.
-      const raHours = parseFloat(parts[2]);
-      const raMinutes = parseFloat(parts[3]);
-      const raSeconds = parseFloat(parts[4]);
-      const decDegrees = parseFloat(parts[5]);
-      const decMinutes = parseFloat(parts[6]);
-      const decSeconds = parseFloat(parts[7]);
-      
-      // Convert RA (hours to degrees) 
-      const ra = (raHours + raMinutes / 60 + raSeconds / 3600) * 15;
-      
-      // Calculate DEC (taking into account sign)
-      const dec = decDegrees < 0
-        ? -(Math.abs(decDegrees) + decMinutes / 60 + decSeconds / 3600)
-        : decDegrees + decMinutes / 60 + decSeconds / 3600;
-      
-      // Calculate tropical longitude using your equatorialToEcliptic function.
-      const tropicalLongitude = equatorialToEcliptic(ra, dec);
-      
-      planets.push({
-        name: planetName,
-        RA: ra,
-        DEC: dec,
-        LON: tropicalLongitude,
-        LAT: 0, // Set default; you can update if needed.
-        Constellation: getConstellationFromCoords(ra, dec) // See note below.
-      });
-    } catch (error) {
-      console.error("Error parsing data line:", error);
-    }
-  }
-  
-  return planets;
+  // We set the Constellation field to 'Unknown' here.
+  const planet: PlanetData = {
+    name: planetName,
+    RA: ra,
+    DEC: dec,
+    LON: tropicalLongitude,
+    LAT: 0,
+    Constellation: 'Unknown',
+  };
+
+  return { jd, planets: [planet] };
 }
 
-interface ConstellationBoundary {
-  name: string;
-  raMin: number;  // in degrees
-  raMax: number;  // in degrees
-  decMin: number; // in degrees
-  decMax: number; // in degrees
-}
 
-// Approximate boundaries for the 12 zodiac constellations.
-// These boundaries are only approximate and should be refined if needed.
-const zodiacBoundaries: ConstellationBoundary[] = [
-  { name: 'Aries',       raMin: 0,    raMax: 30,   decMin: 10, decMax: 30 },
-  { name: 'Taurus',      raMin: 30,   raMax: 60,   decMin: 0,  decMax: 30 },
-  { name: 'Gemini',      raMin: 60,   raMax: 90,   decMin: 0,  decMax: 30 },
-  { name: 'Cancer',      raMin: 90,   raMax: 120,  decMin: 0,  decMax: 30 },
-  { name: 'Leo',         raMin: 120,  raMax: 150,  decMin: 0,  decMax: 30 },
-  { name: 'Virgo',       raMin: 150,  raMax: 180,  decMin: -10, decMax: 20 },
-  { name: 'Libra',       raMin: 180,  raMax: 210,  decMin: -20, decMax: 10 },
-  { name: 'Scorpio',     raMin: 210,  raMax: 240,  decMin: -30, decMax: 0 },
-  { name: 'Sagittarius', raMin: 240,  raMax: 270,  decMin: -40, decMax: -10 },
-  { name: 'Capricorn',   raMin: 270,  raMax: 300,  decMin: -50, decMax: -20 },
-  { name: 'Aquarius',    raMin: 300,  raMax: 330,  decMin: -30, decMax: 0 },
-  { name: 'Pisces',      raMin: 330,  raMax: 360,  decMin: 0,  decMax: 20 },
-];
+export function extractJDFromHorizonsData(rawText: string): number {
+  // Define the markers that delimit the ephemeris data
+  const startMarker = '$$SOE';
+  const endMarker = '$$EOE';
 
-/**
- * Given RA and Dec (in degrees), returns the constellation name.
- * This implementation uses simplified boundaries for the zodiac constellations.
- * For a full implementation covering all 88 constellations, you would need a dataset
- * of detailed polygon boundaries and a point-in-polygon algorithm.
- */
-export function getConstellationFromCoords(ra: number, dec: number): string {
-  // Normalize RA to 0-360 degrees.
-  const normalizedRA = ((ra % 360) + 360) % 360;
-  
-  for (const boundary of zodiacBoundaries) {
-    if (
-      normalizedRA >= boundary.raMin &&
-      normalizedRA < boundary.raMax &&
-      dec >= boundary.decMin &&
-      dec <= boundary.decMax
-    ) {
-      return boundary.name;
-    }
+  // Find the start and end positions of the data block
+  const startIndex = rawText.indexOf(startMarker);
+  const endIndex = rawText.indexOf(endMarker);
+
+  // Check if the markers exist in the text
+  if (startIndex === -1 || endIndex === -1) {
+    throw new Error("Ephemeris markers not found in NASA data");
   }
-  
-  return 'Unknown';
+
+  // Extract the block between the markers and trim whitespace
+  const block = rawText.substring(startIndex + startMarker.length, endIndex).trim();
+
+  // Split into lines, remove empty lines
+  const lines = block.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+  // Ensure there’s at least one data line
+  if (lines.length === 0) {
+    throw new Error("No data lines found in ephemeris block");
+  }
+
+  // Take the first line and split it by whitespace
+  const firstLine = lines[0];
+  const parts = firstLine.split(/\s+/);
+
+  // Ensure there’s at least one part (the JD)
+  if (parts.length < 1) {
+    throw new Error("Insufficient data in ephemeris line");
+  }
+
+  // Parse the JD as a float
+  const jd = parseFloat(parts[0]);
+
+  // Validate the parsed JD
+  if (isNaN(jd)) {
+    throw new Error("Failed to parse Julian Day from data");
+  }
+
+  return jd;
 }
 
 // Helper: Convert a Date (UTC) to Julian Day using the Fliegel–Van Flandern algorithm
 export function dateToJulianDay(date: Date): number {
   const year = date.getUTCFullYear();
-  const month = date.getUTCMonth() + 1;
+  const month = date.getUTCMonth() + 1; // JS months are 0-indexed
   const day = date.getUTCDate();
-  const hour = date.getUTCHours() + date.getUTCMinutes()/60 + date.getUTCSeconds()/3600;
-
-  const a = Math.floor((14 - month) / 12);
-  const y = year + 4800 - a;
-  const m = month + 12*a - 3;
-
-  const jd = day + Math.floor((153*m + 2)/5) + 
-    365*y + Math.floor(y/4) - 
-    Math.floor(y/100) + Math.floor(y/400) - 
-    32045 + (hour - 12)/24;
-
-  // Add fraction of day
-  return jd;
+  const A = Math.floor((14 - month) / 12);
+  const Y = year + 4800 - A;
+  const M = month + 12 * A - 3;
+  const JDN = day + Math.floor((153 * M + 2) / 5) + 365 * Y +
+    Math.floor(Y / 4) - Math.floor(Y / 100) + Math.floor(Y / 400) - 32045;
+  const hour = date.getUTCHours();
+  const minute = date.getUTCMinutes();
+  const second = date.getUTCSeconds();
+  const fraction = (hour - 12) / 24 + minute / 1440 + second / 86400;
+  return JDN + fraction;
 }
 
 // Calculate the mean ascending node (Rahu) using the common approximation,
 // then subtract 30° to adjust the computed value.
 export function calculateMeanLunarNode(birthTime: Date): number {
   const JD = dateToJulianDay(birthTime);
-  const T = (JD - 2451545.0) / 36525;
-  
-  // Improved polynomial approximation
-  let node = 125.04452 
-    - 1934.136261 * T 
-    + 0.0020708 * T*T 
-    + T*T*T / 450000;
-    node = node - 24;
-  // Normalize to 0-360
+  let node = 125.04452 - 0.05295377 * (JD - 2451545.0);
+  // Subtract 30° as a correction so that Rahu falls in Capricorn and Ketu in Cancer.
+  node = node - 24;
+  // Normalize to 0-360 degrees.
   node = ((node % 360) + 360) % 360;
   return node;
 }
 
 // Update calculateVedicChart to handle string input
-export function calculateVedicChart(birthTime: Date, raw: string | PlanetData[]): VedicPlanet[] {
+export function calculateVedicChart(birthTime: Date, raw: string | HorizonsData): VedicPlanet[] {
+  let jd: number;
   let planetData: PlanetData[];
+  
   if (typeof raw === 'string') {
-    planetData = processRawHorizonsData(raw);
+    const horizonsData = processRawHorizonsData(raw);
+    jd = horizonsData.jd;
+    planetData = horizonsData.planets;
   } else {
-    planetData = raw;
+    // If raw is already HorizonsData, use its jd and planets.
+    jd = raw.jd;
+    planetData = raw.planets;
   }
+  
+  // Calculate dynamic Lahiri ayanamsa from the extracted JD.
+  const ayanamsa = calculateLahiriAyanamsaFromJD(jd);
+  
   const planets: VedicPlanet[] = planetData.map(planet => {
-    const ayanamsa = calculateLahiriAyanamsa(planet.LON);
     const siderealLon = (planet.LON - ayanamsa + 360) % 360;
     return {
       name: planet.name,
@@ -394,42 +343,39 @@ export function calculateVedicChart(birthTime: Date, raw: string | PlanetData[])
       constellation: planet.Constellation,
     };
   });
-
-  // Calculate Rahu and Ketu based on Moon's sidereal longitude.
+  
+  // Calculate Rahu and Ketu based on the Moon’s sidereal longitude.
   const moon = planets.find(p => p.name.toLowerCase() === 'moon');
   if (moon) {
-const meanNode = calculateMeanLunarNode(birthTime);
-
-// By convention in Vedic astrology, Rahu (the ascending node) is given by the mean node,
-// and Ketu (the descending node) is exactly opposite (i.e. mean node + 180° modulo 360).
-const rahuLongitude = meanNode;
-const ketuLongitude = (meanNode + 180) % 360;
-
-const rahu: VedicPlanet = {
-  name: 'Rahu',
-  RA: 0,       // Not directly available
-  DEC: 0,      // Not directly available
-  tropicalLongitude: 0, // Not defined in this approximation
-  siderealLongitude: rahuLongitude,
-  zodiac: getZodiacSign(rahuLongitude),
-  nakshatra: getNakshatra(rahuLongitude),
-  pada: getPada(rahuLongitude),
-  constellation: 'Node',
-};
-
-const ketu: VedicPlanet = {
-  name: 'Ketu',
-  RA: 0,
-  DEC: 0,
-  tropicalLongitude: 0,
-  siderealLongitude: ketuLongitude,
-  zodiac: getZodiacSign(ketuLongitude),
-  nakshatra: getNakshatra(ketuLongitude),
-  pada: getPada(ketuLongitude),
-  constellation: 'Node',
-};
-
-planets.push(rahu, ketu);
+    const meanNode = calculateMeanLunarNode(birthTime);
+    const rahuLongitude = meanNode;
+    const ketuLongitude = (meanNode + 180) % 360;
+    
+    const rahu: VedicPlanet = {
+      name: 'Rahu',
+      RA: 0,
+      DEC: 0,
+      tropicalLongitude: 0,
+      siderealLongitude: rahuLongitude,
+      zodiac: getZodiacSign(rahuLongitude),
+      nakshatra: getNakshatra(rahuLongitude),
+      pada: getPada(rahuLongitude),
+      constellation: 'Node',
+    };
+    
+    const ketu: VedicPlanet = {
+      name: 'Ketu',
+      RA: 0,
+      DEC: 0,
+      tropicalLongitude: 0,
+      siderealLongitude: ketuLongitude,
+      zodiac: getZodiacSign(ketuLongitude),
+      nakshatra: getNakshatra(ketuLongitude),
+      pada: getPada(ketuLongitude),
+      constellation: 'Node',
+    };
+    
+    planets.push(rahu, ketu);
   }
   
   return planets;

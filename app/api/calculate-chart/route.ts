@@ -7,6 +7,7 @@ import {
   VedicPlanet,
   processRawHorizonsData,
   PlanetData,
+  HorizonsData,
 } from '@/lib/astrology-utils';
 import { prisma } from '@/db/prisma';
 import { Prisma } from '@prisma/client';
@@ -44,7 +45,8 @@ export async function POST(req: Request) {
     }
 
     // Process rawHorizonsData which is a JSON object keyed by planet names.
-    let rawPlanetData: PlanetData[] = [];
+    let combinedPlanets: PlanetData[] = [];
+    let horizonsDataJD: number | null = null;
     const storedRaw = birthChart.rawHorizonsData;
     if (typeof storedRaw === 'object' && storedRaw !== null && !Array.isArray(storedRaw)) {
       for (const planetKey in storedRaw) {
@@ -56,17 +58,24 @@ export async function POST(req: Request) {
           rawText = planetVal;
         }
         try {
-          // Process each raw text block to extract PlanetData.
-          const planetDataArray = processRawHorizonsData(rawText);
-          if (planetDataArray.length > 0) {
-            rawPlanetData.push(planetDataArray[0]);
+          // Process each raw text block to extract HorizonsData.
+          const hd: HorizonsData = processRawHorizonsData(rawText);
+          if (!horizonsDataJD) {
+            horizonsDataJD = hd.jd;
+          }
+          // Append the first planet data from this block (or modify to merge all if needed)
+          if (hd.planets.length > 0) {
+            combinedPlanets.push(hd.planets[0]);
           }
         } catch (e) {
           console.error(`Error processing data for ${planetKey}:`, e);
         }
       }
     } else if (typeof storedRaw === 'string') {
-      rawPlanetData = processRawHorizonsData(storedRaw);
+      // If storedRaw is a string, process it once.
+      const hd: HorizonsData = processRawHorizonsData(storedRaw);
+      horizonsDataJD = hd.jd;
+      combinedPlanets = hd.planets;
     } else {
       return NextResponse.json(
         { error: 'Invalid format for rawHorizonsData' },
@@ -74,19 +83,24 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!horizonsDataJD) {
+      return NextResponse.json({ error: 'Unable to extract JD from raw data' }, { status: 500 });
+    }
+
     // Calculate Vedic chart data from the combined PlanetData array.
-    const planets: VedicPlanet[] = calculateVedicChart(birthChart.birthTime, rawPlanetData);
+    // Here, calculateVedicChart is updated to accept HorizonsData.
+    const vedicPlanets: VedicPlanet[] = calculateVedicChart(birthChart.birthTime, { jd: horizonsDataJD, planets: combinedPlanets });
 
     // Calculate additional chart elements.
     const lagna = calculateLagna(new Date(birthChart.birthTime), birthChart.lon);
-    const sunPosition = planets.find((p: VedicPlanet) => p.name.toLowerCase() === 'sun');
-    const moonPosition = planets.find((p: VedicPlanet) => p.name.toLowerCase() === 'moon');
+    const sunPosition = vedicPlanets.find((p: VedicPlanet) => p.name.toLowerCase() === 'sun');
+    const moonPosition = vedicPlanets.find((p: VedicPlanet) => p.name.toLowerCase() === 'moon');
     const sunZodiac = sunPosition?.zodiac || getSunZodiacWestern(new Date(birthChart.birthDate));
     const moonNakshatra = moonPosition?.nakshatra || 'Unknown';
 
     // Prepare response data.
     const responseData = {
-      planets: planets.map((p: VedicPlanet) => ({
+      planets: vedicPlanets.map((p: VedicPlanet) => ({
         name: p.name,
         RA: p.RA,
         DEC: p.DEC,
@@ -108,7 +122,7 @@ export async function POST(req: Request) {
       data: {
         vedicData: JSON.parse(JSON.stringify(responseData)) as Prisma.InputJsonValue,
         planetaryData: JSON.parse(JSON.stringify(
-          planets.map((p: VedicPlanet) => ({
+          vedicPlanets.map((p: VedicPlanet) => ({
             name: p.name,
             zodiac: p.zodiac,
             nakshatra: p.nakshatra,
