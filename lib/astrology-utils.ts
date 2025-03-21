@@ -179,15 +179,20 @@ export function processRawHorizonsData(rawText: string): HorizonsData {
     throw new Error("No ephemeris data found.");
   }
 
-  // Use the first line to extract JD and planet data.
-  const firstLine = dataBlock[0];
-  const cleanLine1 = firstLine.replace('*m', '').replace('*', '').trim();
-    const cleanLine2 = cleanLine1.replace('N', '').replace('*', '').trim();
-    const parts = cleanLine2.split(/\s+/);
+  // Define the known flags to be removed.
+  const flagsToRemove = ["*m", "N", "*", "P", "M", "n", "s", "a", "f", "B"];
 
-  if (parts.length < 8) {
-    throw new Error(`Insufficient data in ephemeris line: ${parts.length} parts; expected at least 8 for JD, RA (h m s), DEC (d m s).`);
-  }
+  // Remove flags from each line in the data block
+  let firstLine = dataBlock[0];
+
+  flagsToRemove.forEach(flag => {
+    // Escape special characters like '*' in flags
+    const escapedFlag = flag.replace(/[*+?^${}()|[\]\\]/g, '\\$&');
+    firstLine = firstLine.replace(new RegExp(`\\s*${escapedFlag}\\s*`, 'g'), ' ').trim();
+  });
+
+  // Split cleaned line into parts
+  const parts = firstLine.split(/\s+/);
 
   // Extract JD from parts[0]
   const jd = parseFloat(parts[0]);
