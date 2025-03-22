@@ -133,12 +133,12 @@ export default function BirthDataForm({ userId }: BirthDataFormProps) {
               required
             />
             {suggestions.length > 0 && (
-              <ul className="border border-gray-300 mt-1 rounded bg-white max-h-60 overflow-y-auto">
+              <ul className="border mt-1 rounded max-h-60 overflow-y-auto">
                 {suggestions.map((suggestion, index) => (
                   <li
                     key={index}
                     onClick={() => handleSelectSuggestion(suggestion)}
-                    className="p-2 hover:bg-gray-100 cursor-pointer"
+                    className="p-2 cursor-pointer"
                   >
                     {suggestion.display_name}
                   </li>
