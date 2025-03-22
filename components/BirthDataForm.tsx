@@ -30,7 +30,8 @@ export default function BirthDataForm({ userId }: BirthDataFormProps) {
 
   // Fetch location suggestions from Nominatim (OpenStreetMap)
   useEffect(() => {
-    if (location.trim().length === 0) {
+    // If the input is empty or a suggestion is already selected, don't fetch suggestions.
+    if (location.trim().length === 0 || selectedSuggestion) {
       setSuggestions([]);
       return;
     }
@@ -47,7 +48,7 @@ export default function BirthDataForm({ userId }: BirthDataFormProps) {
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [location]);
+  }, [location, selectedSuggestion]);
 
   const handleSelectSuggestion = (suggestion: LocationSuggestion) => {
     setSelectedSuggestion(suggestion);
@@ -67,16 +68,14 @@ export default function BirthDataForm({ userId }: BirthDataFormProps) {
         return;
       }
       // Call the server action to save birth data.
-      // You can pass the location name along with lat & lon.
       await saveUserBirthData(
         userId,
         birthDate,
         birthTime,
         parseFloat(selectedSuggestion.lat),
         parseFloat(selectedSuggestion.lon),
-        location // Optionally, update the user schema with this location name.
+        location
       );
-      // Redirect to the dashboard after saving.
       router.push('/dashboard');
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -126,8 +125,12 @@ export default function BirthDataForm({ userId }: BirthDataFormProps) {
               name="location"
               value={location}
               onChange={(e) => {
-                setLocation(e.target.value);
-                setSelectedSuggestion(null);
+                const newVal = e.target.value;
+                setLocation(newVal);
+                // Only clear selectedSuggestion if the new value doesn't match the already selected suggestion
+                if (selectedSuggestion && newVal !== selectedSuggestion.display_name) {
+                  setSelectedSuggestion(null);
+                }
               }}
               placeholder="Enter city or location"
               required
