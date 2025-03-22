@@ -85,24 +85,49 @@ export function getZodiacSign(longitude: number): string {
 }
 
 /**
- * Calculates the Lagna (Ascendant) using a simplified approximation.
- * This function uses UT from birthTime and adjusts for the observer's longitude.
- * Note: This is a simplified calculation and may not be accurate for all charts.
+ * Calculates the Lagna (Ascendant) using astronomical formulas.
+ * This function calculates the precise ascendant based on the observer's
+ * location and time using the Obliquity of the Ecliptic.
  * @param birthTime - The birth time as a Date object.
- * @param longitude - The observer's longitude in degrees.
+ * @param longitude - The observer's longitude in degrees (East positive).
+ * @param latitude - The observer's latitude in degrees (North positive).
  * @returns The ascendant zodiac sign.
  */
-export function calculateLagna(birthTime: Date, longitude: number): string {
-  // A very simplified approach: assume Local Sidereal Time (LST) in hours is UT (in hours) + (longitude / 15).
-  const utHours = birthTime.getUTCHours() + birthTime.getUTCMinutes() / 60;
-  const lstHours = (utHours + longitude / 15) % 24;
-  // For demonstration, divide the 24-hour LST into 12 signs (each sign roughly corresponds to 2 hours).
-  const signs = [
-    'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
-    'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
-  ];
-  const index = Math.floor(lstHours / 2) % 12;
-  return signs[index];
+export function calculateLagna(birthTime: Date, longitude: number, latitude: number): string {
+  const jd = dateToJulianDay(birthTime);
+  
+  // Calculate Local Sidereal Time (LST)
+  const T = (jd - 2451545.0) / 36525;
+  const GMST = 280.46061837 + 360.98564736629 * (jd - 2451545) 
+              + 0.000387933 * T * T - T * T * T / 38710000;
+  const LST = (GMST + longitude) % 360;
+  
+  // Calculate Obliquity of the Ecliptic
+  const epsilon = 23.4392911 - 0.0130042 * T - 0.00000164 * T * T + 0.000000503 * T * T * T;
+  
+  // Convert LST to Right Ascension of the Ascendant
+  const LST_rad = (LST * Math.PI) / 180;
+  const lat_rad = (latitude * Math.PI) / 180;
+  const epsilon_rad = (epsilon * Math.PI) / 180;
+  
+  const RA = Math.atan2(
+    Math.sin(LST_rad),
+    Math.cos(LST_rad) * Math.cos(epsilon_rad) + 
+    Math.tan(lat_rad) * Math.sin(epsilon_rad)
+  );
+  
+  // Convert RA to Ecliptic Longitude
+  const lambda = Math.atan2(
+    Math.sin(RA) * Math.cos(epsilon_rad),
+    Math.cos(RA)
+  );
+  
+  // Convert to degrees and normalize
+  let ascendantLongitude = (lambda * 180) / Math.PI;
+  if (ascendantLongitude < 0) ascendantLongitude += 360;
+  
+  // Get zodiac sign from longitude
+  return getZodiacSign(ascendantLongitude);
 }
 
 

@@ -92,7 +92,7 @@ export async function POST(req: Request) {
     const vedicPlanets: VedicPlanet[] = calculateVedicChart(birthChart.birthTime, { jd: horizonsDataJD, planets: combinedPlanets });
 
     // Calculate additional chart elements.
-    const lagna = calculateLagna(new Date(birthChart.birthTime), birthChart.lon);
+    const lagna = calculateLagna(new Date(birthChart.birthTime), birthChart.lon, birthChart.lat);
     const sunPosition = vedicPlanets.find((p: VedicPlanet) => p.name.toLowerCase() === 'sun');
     const moonPosition = vedicPlanets.find((p: VedicPlanet) => p.name.toLowerCase() === 'moon');
     const sunZodiac = sunPosition?.zodiac || getSunZodiacWestern(new Date(birthChart.birthDate));
