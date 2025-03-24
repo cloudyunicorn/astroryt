@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
@@ -19,7 +19,7 @@ export default function AIRecommendations({ personalData }: AIRecommendationsPro
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  const fetchRecommendation = async () => {
+  const fetchRecommendation = useCallback(async () => {
     setLoading(true);
     setError('');
 
@@ -42,11 +42,11 @@ export default function AIRecommendations({ personalData }: AIRecommendationsPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [personalData]);
 
   useEffect(() => {
     fetchRecommendation();
-  }, [personalData]);
+  }, [personalData, fetchRecommendation]);
 
   return (
     <Card className="shadow-sm border rounded-lg bg-background">

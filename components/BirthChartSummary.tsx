@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -79,6 +79,8 @@ export default function BirthChartSummary({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const hasFetchedRef = useRef(false);
+
   const fetchAllChartData = useCallback(async () => {
     try {
       // Fetch both data sources in parallel
@@ -103,8 +105,9 @@ export default function BirthChartSummary({
   }, [userId]);
 
   useEffect(() => {
-    if (hasUserBirthData) {
+    if (hasUserBirthData && !hasFetchedRef.current) {
       fetchAllChartData();
+      hasFetchedRef.current = true;
     }
   }, [hasUserBirthData, fetchAllChartData]);
 
