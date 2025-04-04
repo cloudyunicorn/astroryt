@@ -9,7 +9,6 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, Dia
 interface DailyHoroscopeProps {
   zodiacSign: string;
 }
-
 export default function WeeklyHoroscope({ zodiacSign }: DailyHoroscopeProps) {
   const [horoscope, setHoroscope] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
