@@ -74,7 +74,7 @@ export default function DashboardClient({
         </div>
         <div className="flex gap-4">
           <Button asChild variant="outline">
-            <Link href="/settings">
+            <Link href="/profile-settings">
               <Settings className="w-4 h-4 mr-2" />
               Profile Settings
             </Link>

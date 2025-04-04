@@ -10,13 +10,7 @@ import {
 import { getSunZodiacWestern } from '@/lib/astrology-utils';
 import { formatBirthDate, formatBirthTime } from '@/lib/utils';
 import DashboardClient from '@/components/DashboardClient';
-
-interface MySession {
-  user: {
-    id: string;
-    name?: string | null;
-  };
-}
+import { MySession } from "@/lib/types/user-data";
 
 export default async function Dashboard() {
   const session = await auth();

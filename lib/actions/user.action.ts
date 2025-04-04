@@ -146,3 +146,44 @@ export async function getUserVedicData(userId: string): Promise<Prisma.JsonValue
 
   return chart.vedicData;
 }
+
+export const getUserById = async (userId: string) => {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      birthLocation: true
+    }
+  });
+};
+
+export const updateUserProfile = async (
+  userId: string, 
+  data: { name?: string; birthLocation?: string }
+) => {
+  return prisma.user.update({
+    where: { id: userId },
+    data
+  });
+}
+
+export const getBirthChartByUserId = async (userId: string) => {
+  return prisma.birthChart.findUnique({
+    where: { userId }
+  });
+}
+
+export const updateBirthChart = async (
+  userId: string,
+  data: { birthDate?: Date; birthTime?: string }
+) => {
+  return prisma.birthChart.update({
+    where: { userId },
+    data: {
+      birthDate: data.birthDate,
+      birthTime: data.birthTime ? new Date(`1970-01-01T${data.birthTime}`) : undefined
+    }
+  });
+}
